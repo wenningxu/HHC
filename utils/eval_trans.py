@@ -768,7 +768,7 @@ def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_i
     return fid, pose, m_length, clip_text, best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, multimodality, writer, logger
 
 def evaluation_transformer_uplow(out_dir, val_loader, net, trans, logger, writer, nb_iter, best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, clip_model, eval_wrapper, dataname, draw = True, save = True, savegif=False, num_repeat=1, rand_pos=False, CFG=-1) : 
-    from utils.humanml_utils import HML_UPPER_BODY_MASK, HML_LOWER_BODY_MASK
+    from utils.motion_masks import HML_UPPER_BODY_MASK, HML_LOWER_BODY_MASK
 
     trans.eval()
     nb_sample = 0

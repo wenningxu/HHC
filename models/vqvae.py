@@ -1,7 +1,7 @@
 import torch.nn as nn
 from models.encdec import Encoder, Decoder
 from models.quantize_cnn import QuantizeEMAReset, Quantizer, QuantizeEMA, QuantizeReset, FSQ
-from models.t2m_trans import Decoder_Transformer, Encoder_Transformer
+from models.motion_transformer import Decoder_Transformer, Encoder_Transformer
 from exit.utils import generate_src_mask
 from utils.fk import FK_Single_Layer_Batch
 from utils.paramUtil import SMPLX_TREE, INTERX_SKELETONS

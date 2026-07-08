@@ -513,7 +513,7 @@ class Block(nn.Module):
         x = x + self.mlp(self.ln2(x))
         return x
 
-from models.t2m_trans import Block_crossatt
+from models.motion_transformer import Block_crossatt
 class CrossCondTransBase(nn.Module):
 
     def __init__(self, 
@@ -634,4 +634,3 @@ class CrossCondTransHead(nn.Module):
 
 
         
-

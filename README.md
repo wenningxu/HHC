@@ -56,7 +56,7 @@ dataset/chi3d/stats/*.npy
 
 ## Cleanup Notes
 
-Some shared modules still carry legacy names such as `humanml_utils` and `t2m_trans`. They are retained temporarily because active two-person code still imports reusable masks or transformer blocks from them. These should be simplified after the active imports are untangled.
+Reusable motion masks are centralized in `utils/motion_masks.py`. Shared transformer blocks live in `models/motion_transformer.py`. Some model classes still retain legacy class names for checkpoint compatibility and should be simplified only after checkpoint loading paths are confirmed.
 
 ## License
 

@@ -2,10 +2,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from models.encdec import Encoder, Decoder
 from models.quantize_cnn import QuantizeEMAReset, Quantizer, QuantizeEMA, QuantizeReset
-from models.t2m_trans import Decoder_Transformer, Encoder_Transformer
+from models.motion_transformer import Decoder_Transformer, Encoder_Transformer
 from exit.utils import generate_src_mask
 import torch
-from utils.humanml_utils import HML_UPPER_BODY_MASK, HML_LOWER_BODY_MASK, UPPER_JOINT_Y_MASK, HHI_BODY_ROOT_MASK, HHI_HAND_ROOT_MASK, \
+from utils.motion_masks import HML_UPPER_BODY_MASK, HML_LOWER_BODY_MASK, UPPER_JOINT_Y_MASK, HHI_BODY_ROOT_MASK, HHI_HAND_ROOT_MASK, \
     HHI_WHOLE_MASK, HHI_HAND_MASK, HHI_BODY_MASK, HHI_ROOT_MASK_OLD, SMPLX_BODY_MASK, SMPLX_HAND_MASK, SMPLX_ROOT_MASK, HHI_ROOT_MASK
 from utils.fk import FK_Single_Layer_Batch, FK_Pair_Layer_Batch
 from utils.paramUtil import SMPLX_TREE, INTERX_SKELETONS
