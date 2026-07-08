@@ -1,149 +1,63 @@
-# [MMM: Generative Masked Motion Model](https://exitudio.github.io/MMM-page/) (CVPR 2024, Highlight)
-[![arXiv](https://img.shields.io/badge/arXiv-<2312.03596>-<COLOR>.svg)](https://arxiv.org/abs/2312.03596)
+# HHC: Two-Person Motion Generation
 
-The official PyTorch implementation of the paper [**"MMM: Generative Masked Motion Model"**](https://arxiv.org/abs/2312.03596).
+This repository is being cleaned and reorganized from the original MMM codebase into a two-person motion generation project.
 
-Please visit our [**webpage**](https://exitudio.github.io/MMM-page/) for more details.
+## Current Scope
 
-![teaser_image](https://exitudio.github.io/MMM-page/assets/head.jpg)
+The active code paths are focused on:
 
-If our project is helpful for your research, please consider citing :
-``` 
-@inproceedings{pinyoanuntapong2024mmm,
-  title={MMM: Generative Masked Motion Model}, 
-  author={Ekkasit Pinyoanuntapong and Pu Wang and Minwoo Lee and Chen Chen},
-  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
-  year={2024},
-}
-```
-## Update
+- InterX two-person text-conditioned motion generation.
+- Chi3D two-person VQ and action-conditioned generation experiments.
+- Contact-aware post-processing and penetration/multimodality evaluation utilities.
 
-📢 June/25/25 - Our new paper ([MaskControl (ControlMM)](https://www.ekkasit.com/ControlMM-page/)) is accepted at ICCV 2025  <br>
-📢 June/22/25 - Released code for adding control to MMM ([MaskControl (ControlMM)](https://www.ekkasit.com/ControlMM-page/))<br>
-📢 July/2/24 - Our new paper ([BAMM](https://exitudio.github.io/BAMM-page/)) is accepted at ECCV 2024  <br>
-📢 June/10/24 - Update pretrain model with FID. 0.070 (using batchsize 128)<br>
-📢 June/8/24 - Interactive demo is live at [huggingface](https://huggingface.co/spaces/samadi10/MMM-Demo) <br>
-📢 June/3/24 - Fix generation bugs & add download script & update pretrain model with 2 local layers (better score than reported in the paper)
+Legacy single-person MMM/HumanML/KIT entry scripts and the bundled Text2Motion training/evaluation package have been removed from the active tree.
 
-## Getting Started
-### 1. Setup Env
-```
-conda env create -f environment.yml
-conda activate MMM
-```
-
-If you have a problem with the conflict, you can install them manually
-```
-conda create --name MMM
-conda activate MMM
-conda install plotly tensorboard scipy matplotlib pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia
-pip install git+https://github.com/openai/CLIP.git einops gdown
-pip install --upgrade nbformat
-```
-
-### 2. Get Data
-### 2.1. Download Glove
-```
-bash dataset/prepare/download_glove.sh
-```
-
-
-### 2.2. Motion & text feature extractors:
-
-We use the same extractors provided by [t2m](https://github.com/EricGuo5513/text-to-motion) to evaluate our generated motions. Please download the extractors.
+## Main Entrypoints
 
 ```bash
-bash dataset/prepare/download_extractor.sh
+python train_t2i_trans.py
+python train_vq_chi3d.py
+python train_mgt_chi3d.py
+python generate.py
+python generate_mm_samples.py
+python optimize_chi3d_gt.py
+python optimize_full_body.py
 ```
 
-### 2.3. Pre-trained models 
+Diffusion/MLD experiments are archived under:
 
-```bash
-bash dataset/prepare/download_model.sh
-```
-### 2.4. Pre-trained models only for upper body editing (optional) 
-
-```bash
-bash dataset/prepare/download_model_upperbody.sh
-```
-<!-- ### 3. Download Pretrained Models
-```
-https://drive.google.com/drive/u/1/folders/19qRMMk0mQyA7wyeWU4oZNSFkI6tLxGPN
-```
-There are 2 folders. Each of which consists of VQVAE and Text-to-Motion transformer models.
-1. **text-to-motion**: for text-to-motion and all temporal editing tasks
-2. **upper_body_editing**: for upper body editing task.
-
-Download and put the pretrained models in `output` folder
-`./output/vq/vq_name/net_last.pth` and `./output/t2m/trans_name/net_last.pth` -->
-
-
-
-### 2.5. Datasets
-
-
-We are using two 3D human motion-language dataset: HumanML3D and KIT-ML. For both datasets, you could find the details as well as download link [[here]](https://github.com/EricGuo5513/HumanML3D).   
-
-Take HumanML3D for an example, the file directory should look like this:  
-```
-./dataset/HumanML3D/
-├── new_joint_vecs/
-├── texts/
-├── Mean.npy # same as in [HumanML3D](https://github.com/EricGuo5513/HumanML3D) 
-├── Std.npy # same as in [HumanML3D](https://github.com/EricGuo5513/HumanML3D) 
-├── train.txt
-├── val.txt
-├── test.txt
-├── train_val.txt
-└── all.txt
+```text
+archive/diffusion_mld/
 ```
 
+## Local Data Layout
 
+Large datasets, checkpoints, body models, generated samples, and experiment outputs are intentionally ignored by Git. Keep them local under the expected paths:
 
-
-## Training
-#### VQ-VAE
+```text
+dataset/interx/
+dataset/chi3d/
+body_models/
+checkpoints/
+output/
+result/
+results/
+final_demo/
+wandb/
 ```
-python train_vq.py --dataname t2m --exp-name vq_name
+
+Small normalization statistics required by the code are versioned:
+
+```text
+dataset/interx/*Mean*.npy
+dataset/interx/*Std*.npy
+dataset/chi3d/stats/*.npy
 ```
 
-### Transformer
+## Cleanup Notes
 
-```
-python train_t2m_trans.py --vq-name vq_name --out-dir output/t2m --exp-name trans_name --num-local-layer 2
-```
-- Make sure the pretrain vqvae in ```output/vq/vq_name/net_last.pth``` <br>
-- ```--num-local-layer``` is number of cross attention layer <br>
-- support multple gpus ```export CUDA_VISIBLE_DEVICES=0,1,2,3``` <br>
-- we use 4 gpus, increasing batch size and iteration to ```--batch-size 512 --total-iter 75000```
-- The codebook will be pre-computed and export to ```output/vq/vq_name/codebook``` (It will take a couple minutes.)
-
-
-### Eval
-```
-python GPT_eval_multi.py --exp-name eval_name --resume-pth output/vq/2024-06-03-20-22-07_retrain/net_last.pth --resume-trans output/t2m/2024-06-04-09-29-20_trans_name_b128/net_last.pth --num-local-layer 2
-```
-The log and tensorboard data will be in ```./output/eval/```
-- ```--resume-pth ``` path for vevae
-- ```--resume-trans``` path for transformer 
-## Motion Generation
-<summary><b>Text to Motion</b></summary>
-
-```bash
-python generate.py  --resume-pth output/vq/2024-06-03-20-22-07_retrain/net_last.pth --resume-trans output/t2m/2024-06-04-09-29-20_trans_name_b128/net_last.pth --text 'the person crouches and walks forward.' --length 156
-``````
-The generated html is in ```output``` folder.
-
-<summary><b>Editing</b></summary>
-(Please load pretrained model for upper body editing as described in section 2.4) <br>
-For better visualization of motion editing, we provide examples of all editing tasks in Jupyter Notebook. Please see the details in:
-
-```bash
-./edit.ipynb
-``````
-
+Some shared modules still carry legacy names such as `dataset_TM_*`, `dataset_VQ`, and `humanml_utils`. They are retained temporarily because active two-person code still imports them. These should be renamed or removed after the active imports are untangled.
 
 ## License
-This code is distributed under an [LICENSE-CC-BY-NC-ND-4.0](LICENSE-CC-BY-NC-ND-4.0.md).
 
-Note that our code depends on other libraries, including CLIP, SMPL, SMPL-X, PyTorch3D, T2M-GPT, and uses datasets that each have their own respective licenses that must also be followed.
+This repository is derived from the MMM codebase and retains the original license file. External datasets, SMPL/SMPL-X assets, CLIP, PyTorch3D, and evaluator assets have their own licenses and usage restrictions.
