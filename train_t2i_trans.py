@@ -19,9 +19,7 @@ import models.vqvae as vqvae
 from models.vqvae_sep import VQVAE_SEP3_shape
 import utils.utils_model as utils_model
 import utils.eval_trans as eval_trans
-from dataset import dataset_TM_train
-from dataset import dataset_TM_eval
-from dataset import dataset_tokenize, dataset_interx, dataset_interx_TM, dataset_interx_tokenize
+from dataset import dataset_interx_TM, dataset_interx_tokenize
 import models.t2m_trans as trans
 from models.t2i_trans import Text2Motion_Transformer
 from options.get_eval_option import get_opt

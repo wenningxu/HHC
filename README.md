@@ -56,7 +56,7 @@ dataset/chi3d/stats/*.npy
 
 ## Cleanup Notes
 
-Some shared modules still carry legacy names such as `dataset_TM_*`, `dataset_VQ`, and `humanml_utils`. They are retained temporarily because active two-person code still imports them. These should be renamed or removed after the active imports are untangled.
+Some shared modules still carry legacy names such as `humanml_utils` and `t2m_trans`. They are retained temporarily because active two-person code still imports reusable masks or transformer blocks from them. These should be simplified after the active imports are untangled.
 
 ## License
 
