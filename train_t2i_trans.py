@@ -1,21 +1,14 @@
 import os
-from typing import Any
-import codecs as cs
 
 import torch
 import numpy as np
 import pytorch_lightning as pl
-from pytorch_lightning.utilities.types import STEP_OUTPUT
-from torch.utils.tensorboard import SummaryWriter
 from os.path import join as pjoin
-from torch.distributions import Categorical
-import json
 import clip
 import math
 import time
 
 import options.option_transformer as option_trans
-import models.vqvae as vqvae
 from models.vqvae_sep import VQVAE_SEP3_shape
 import utils.utils_model as utils_model
 import utils.eval_trans as eval_trans
@@ -26,13 +19,11 @@ from models.evaluator_wrapper import EvaluatorModelWrapper
 import warnings
 
 warnings.filterwarnings('ignore')
-from exit.utils import get_model, visualize_2motions
 from tqdm import tqdm
 import wandb
-from exit.utils import get_model, visualize_2motions, generate_src_mask, init_save_folder, uniform, cosine_schedule
-from einops import rearrange, repeat
+from exit.utils import generate_src_mask, init_save_folder
+from einops import rearrange
 import torch.nn.functional as F
-from exit.utils import base_dir
 from utils.word_vectorizer import WordVectorizer
 from lightning.pytorch.loggers import WandbLogger
 from utils.motion_process import MotionNormalizerTorchInterX, recover_interx
