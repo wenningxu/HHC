@@ -448,6 +448,26 @@ class Block(nn.Module):
         x = x + self.attn(self.ln1(x), src_mask)
         x = x + self.mlp(self.ln2(x))
         return x
+
+class AdaBlock(nn.Module):
+
+    def __init__(self, embed_dim=512, block_size=16, n_head=8, drop_out_rate=0.1, fc_rate=4):
+        super().__init__()
+        self.ln1 = nn.LayerNorm(embed_dim)
+        self.ln2 = nn.LayerNorm(embed_dim)
+        self.adaln = AdaLN(embed_dim, embed_dim)
+        self.attn = Attention(embed_dim, block_size, n_head, drop_out_rate)
+        self.mlp = nn.Sequential(
+            nn.Linear(embed_dim, fc_rate * embed_dim),
+            nn.GELU(),
+            nn.Linear(fc_rate * embed_dim, embed_dim),
+            nn.Dropout(drop_out_rate),
+        )
+
+    def forward(self, x, cond_emb, src_mask=None):
+        x = x + self.attn(self.adaln(self.ln1(x), cond_emb), src_mask)
+        x = x + self.mlp(self.adaln(self.ln2(x), cond_emb))
+        return x
     
 class CrossAttention(nn.Module):
 
@@ -466,6 +486,8 @@ class CrossAttention(nn.Module):
         # causal mask to ensure that attention is only applied to the left in the input sequence
         self.register_buffer("mask", torch.tril(torch.ones(block_size, 77)).view(1, 1, block_size, 77))
         self.n_head = n_head
+        self.last_attn = None
+
 
     def forward(self, x,word_emb):
         B, T, C = x.size()
@@ -478,6 +500,8 @@ class CrossAttention(nn.Module):
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, N) -> (B, nh, T, N)
         att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
         att = F.softmax(att, dim=-1)
+        self.last_attn = att.detach().cpu()
+
         att = self.attn_drop(att)
         y = att @ v # (B, nh, T, N) x (B, nh, N, hs) -> (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
@@ -620,7 +644,21 @@ class CrossCondTransHead(nn.Module):
         return logits
 
     
+class AdaLN(nn.Module):
+    def __init__(self, dim, cond_dim):
+        super().__init__()
+        self.mlp = nn.Sequential(
+            nn.Linear(cond_dim, dim * 2),
+            nn.SiLU(),
+            nn.Linear(dim * 2, dim * 2)
+        )
 
+    def forward(self, x, cond):
+        # cond: (B, cond_dim)
+        gamma, beta = self.mlp(cond).chunk(2, dim=-1)
+        gamma = gamma.unsqueeze(1)
+        beta  = beta.unsqueeze(1)
+        return x * (1 + gamma) + beta
 
         
 

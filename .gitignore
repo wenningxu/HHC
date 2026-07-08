@@ -1,10 +1,46 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-./output/*
+*.pyo
 
-checkpoints
-glove
-dataset/HumanML3D
-dataset/KIT-ML
-output
+# Local environments
+.env
+.venv/
+env/
+venv/
+
+# Logs and experiment trackers
+*.log
+wandb/
+logs/
+runs/
+lightning_logs/
+
+# Large local datasets and body models
+body_models/
+dataset/HumanML3D/
+dataset/KIT-ML/
+dataset/interx/
+dataset/chi3d/
+glove/
+
+# Model checkpoints and generated training artifacts
+checkpoints/
+output/
+
+# Evaluation/generation results kept locally
+result/
+results/
+final_demo/
+generate/gen_results/
+generate/gen_results_ground/
+
+# Temporary/debug numeric dumps
+*.npy
+*.npz
+*.h5
+*.pkl
+
+# Keep IDE project files visible to git status by request:
+# .idea/
+# .vscode/

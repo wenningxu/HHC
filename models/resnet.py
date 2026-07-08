@@ -10,7 +10,7 @@ class nonlinearity(nn.Module):
         return x * torch.sigmoid(x)
 
 class ResConv1DBlock(nn.Module):
-    def __init__(self, n_in, n_state, dilation=1, activation='silu', norm=None, dropout=None):
+    def __init__(self, n_in, n_state, dilation=1, activation='silu', norm=None, dropout=0.0):
         super().__init__()
         padding = dilation
         self.norm = norm
@@ -39,8 +39,12 @@ class ResConv1DBlock(nn.Module):
         elif activation == "gelu":
             self.activation1 = nn.GELU()
             self.activation2 = nn.GELU()
-            
-        
+
+        if dropout is not None and dropout > 0:
+            self.dropout = nn.Dropout(dropout)
+        else:
+            self.dropout = nn.Identity()
+
 
         self.conv1 = nn.Conv1d(n_in, n_state, 3, 1, padding, dilation)
         self.conv2 = nn.Conv1d(n_state, n_in, 1, 1, 0,)     
@@ -65,6 +69,7 @@ class ResConv1DBlock(nn.Module):
             x = self.activation2(x)
 
         x = self.conv2(x)
+        x = self.dropout(x)
         x = x + x_orig
         return x
 

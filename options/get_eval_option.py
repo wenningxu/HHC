@@ -71,11 +71,27 @@ def get_opt(opt_path, device):
         opt.max_motion_length = 196
         opt.max_motion_frame = 196
         opt.max_motion_token = 55
+    elif opt.dataset_name == 'hhi':
+        opt.data_root = './dataset/inter-x'
+        opt.motion_dir = pjoin(opt.data_root, 'motions')
+        opt.text_dir = pjoin(opt.data_root, 'texts_processed')
+        opt.joints_num = 56
+        opt.dim_pose = opt.joints_num * 12
+        opt.max_motion_length = 150
+        opt.max_text_len = 35
+    elif opt.dataset_name == 'hhi_shape':
+        opt.data_root = './dataset/inter-x'
+        opt.motion_dir = pjoin(opt.data_root, 'data_shape')
+        opt.text_dir = pjoin(opt.data_root, 'texts_processed')
+        opt.joints_num = 56
+        opt.dim_pose = opt.joints_num * 12
+        opt.max_motion_length = 150
+        opt.max_text_len = 35
     else:
         raise KeyError('Dataset not recognized')
 
     opt.dim_word = 300
-    opt.num_classes = 200 // opt.unit_length
+    opt.num_classes = 152 // opt.unit_length
     opt.is_train = False
     opt.is_continue = False
     opt.device = device

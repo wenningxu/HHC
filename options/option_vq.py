@@ -4,11 +4,15 @@ def get_args_parser():
     parser = argparse.ArgumentParser(description='Optimal Transport AutoEncoder training for AIST',
                                      add_help=True,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    ## dataloader  
+    parser.add_argument('--device', type=str, default='cuda:0')
+    ## dataloader
     parser.add_argument('--dataname', type=str, default='kit', help='dataset directory')
     parser.add_argument('--batch-size', default=256, type=int, help='batch size')
     parser.add_argument('--window-size', type=int, default=64, help='training motion length')
+    parser.add_argument('--num_primitive', type=int, default=4, help='training motion length')
+    parser.add_argument('--history_length', type=int, default=3, help='training motion length')
+    parser.add_argument('--future_length', type=int, default=12, help='training motion length')
+    parser.add_argument('--motion_rep', type=str, default='vel', help='motion root representation')
 
     ## optimization
     parser.add_argument('--total-iter', default=300000, type=int, help='number of total iterations to run')
@@ -16,35 +20,45 @@ def get_args_parser():
     parser.add_argument('--lr', default=2e-4, type=float, help='max learning rate')
     parser.add_argument('--lr-scheduler', default=[200000], nargs="+", type=int, help="learning rate schedule (iterations)")
     parser.add_argument('--gamma', default=0.05, type=float, help="learning rate decay")
+    parser.add_argument('--stage1_steps', default=100000, type=float, help="learning rate decay")
+    parser.add_argument('--stage2_steps', default=200000, type=float, help="learning rate decay")
 
-    parser.add_argument('--weight-decay', default=0.0, type=float, help='weight decay')
+
+    parser.add_argument('--weight-decay', default=0.00002, type=float, help='weight decay')
     parser.add_argument("--commit", type=float, default=0.02, help="hyper-parameter for the commitment loss")
-    parser.add_argument('--loss-vel', type=float, default=0.5, help='hyper-parameter for the velocity loss')
+    parser.add_argument('--kl', type=float, default=1e-3, help='hyper-parameter for the kl loss')
     parser.add_argument('--recons-loss', type=str, default='l1_smooth', help='reconstruction loss')
-    
+    parser.add_argument('--loss_explicit', type=float, default=3, help='hyper-parameter for the explicit loss')#0.1
+    parser.add_argument('--loss_vel', type=float, default=100, help='hyper-parameter for the velocity loss')
+    parser.add_argument('--loss_root', type=float, default=0.1, help='hyper-parameter for the bone length loss')
+    parser.add_argument('--loss_geo', type=float, default=0.01, help='hyper-parameter for the geodesic loss') #0.001
+    parser.add_argument('--loss_fc', type=float, default=10, help='hyper-parameter for the foot contact loss')  # 100
+    parser.add_argument('--loss_inter_oriental', type=float, default=0, help='hyper-parameter for the foot contact loss')  # 100
+    parser.add_argument('--loss_distance_map', type=float, default=0.1, help='hyper-parameter for the foot contact loss')  # 100
     ## vqvae arch
-    parser.add_argument("--code-dim", type=int, default=32, help="embedding dimension")
-    parser.add_argument("--nb-code", type=int, default=8192, help="nb of embedding")
+    parser.add_argument("--code-dim", type=int, default=512, help="embedding dimension")
+    parser.add_argument("--nb-code", type=int, default=1024, help="nb of embedding")
     parser.add_argument("--mu", type=float, default=0.99, help="exponential moving average to update the codebook")
     parser.add_argument("--down-t", type=int, default=2, help="downsampling rate")
     parser.add_argument("--stride-t", type=int, default=2, help="stride size")
     parser.add_argument("--width", type=int, default=512, help="width of the network")
     parser.add_argument("--depth", type=int, default=3, help="depth of the network")
     parser.add_argument("--dilation-growth-rate", type=int, default=3, help="dilation growth rate")
-    parser.add_argument("--output-emb-width", type=int, default=512, help="output embedding width")
+    parser.add_argument("--output-emb-width", type=int, default=256, help="output embedding width")
     parser.add_argument('--vq-act', type=str, default='relu', choices = ['relu', 'silu', 'gelu'], help='dataset directory')
     parser.add_argument('--vq-norm', type=str, default=None, help='dataset directory')
-    
+    parser.add_argument('--levels', default=[8,5,5,5,], help='fsq levels')
+
     ## quantizer
-    parser.add_argument("--quantizer", type=str, default='ema_reset', choices = ['ema', 'orig', 'ema_reset', 'reset'], help="eps for optimal transport")
+    parser.add_argument("--quantizer", type=str, default='ema_reset', choices = ['ema', 'orig', 'ema_reset', 'reset', 'fsq'], help="eps for optimal transport")
     parser.add_argument('--beta', type=float, default=1.0, help='commitment loss in standard VQ')
 
     ## resume
     parser.add_argument("--resume-pth", type=str, default=None, help='resume pth for VQ')
     parser.add_argument("--resume-gpt", type=str, default=None, help='resume pth for GPT')
-    
-    
-    ## output directory 
+
+
+    ## output directory
     parser.add_argument('--out-dir', type=str, default='output', help='output directory')
     parser.add_argument('--results-dir', type=str, default='visual_results/', help='output directory')
     parser.add_argument('--visual-name', type=str, default='baseline', help='output directory')
@@ -53,10 +67,10 @@ def get_args_parser():
     parser.add_argument('--print-iter', default=200, type=int, help='print frequency')
     parser.add_argument('--eval-iter', default=5000, type=int, help='evaluation frequency')
     parser.add_argument('--seed', default=123, type=int, help='seed for initializing training.')
-    
+
     parser.add_argument('--vis-gt', action='store_true', help='whether visualize GT motions')
     parser.add_argument('--nb-vis', default=20, type=int, help='nb of visualizations')
-    
+
     parser.add_argument('--sep-uplow', action='store_true', help='whether visualize GT motions')
-    
+
     return parser.parse_args()

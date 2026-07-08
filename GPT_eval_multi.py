@@ -7,9 +7,10 @@ import clip
 
 import options.option_transformer as option_trans
 import models.vqvae as vqvae
+from models.vqvae_sep import VQVAE_SEP, VQVAE_SEP_shape, VQVAE_SEP_shape_primitive, VQVAE_SEP3_shape, VQVAE_SEP3_shape_new
 import utils.utils_model as utils_model
 import utils.eval_trans as eval_trans
-from dataset import dataset_TM_eval
+from dataset import dataset_TM_eval, dataset_interx_TM
 import models.t2m_trans as trans
 from options.get_eval_option import get_opt
 from models.evaluator_wrapper import EvaluatorModelWrapper
@@ -31,12 +32,26 @@ writer = SummaryWriter(args.out_dir)
 logger.info(json.dumps(vars(args), indent=4, sort_keys=True))
 
 from utils.word_vectorizer import WordVectorizer
-w_vectorizer = WordVectorizer('./glove', 'our_vab')
-val_loader = dataset_TM_eval.DATALoader(args.dataname, True, 32, w_vectorizer)
+w_vectorizer = WordVectorizer('./dataset/interx/glove', 'hhi_vab')
 
-dataset_opt_path = 'checkpoints/kit/Comp_v6_KLD005/opt.txt' if args.dataname == 'kit' else 'checkpoints/t2m/Comp_v6_KLD005/opt.txt'
+if args.dataname == 'kit' :
+    dataset_opt_path = 'checkpoints/kit/Comp_v6_KLD005/opt.txt'
+    args.nb_joints = 21
 
-wrapper_opt = get_opt(dataset_opt_path, torch.device('cuda'))
+elif args.dataname == 'hhi':
+    dataset_opt_path = 'checkpoints/hhi/Comp_v6_KLD01/opt.txt'
+    args.nb_joints = 55
+
+else :
+    dataset_opt_path = 'checkpoints/t2m/Comp_v6_KLD005/opt.txt'
+    args.nb_joints = 22
+
+val_file = 'dataset/interx/val.txt'
+val_motion = 'dataset/interx/motions/val.h5'
+val_loader = dataset_interx_TM.DATALoader(args.dataname, 32, val_file, w_vectorizer, val_motion,
+                                              unit_length=2 ** args.down_t, shuffle=False)
+
+wrapper_opt = get_opt(dataset_opt_path, torch.device('cuda:1'))
 eval_wrapper = EvaluatorModelWrapper(wrapper_opt)
 
 ##### ---- Network ---- #####
@@ -63,7 +78,7 @@ class TextCLIP(torch.nn.Module):
         return enctxt, word_emb
 clip_model = TextCLIP(clip_model)
 
-net = vqvae.HumanVQVAE(args, ## use args to define different parameters in different quantizers
+net= VQVAE_SEP3_shape(args,  ## use args to define different parameters in different quantizers
                        args.nb_code,
                        args.code_dim,
                        args.output_emb_width,
@@ -71,7 +86,9 @@ net = vqvae.HumanVQVAE(args, ## use args to define different parameters in diffe
                        args.stride_t,
                        args.width,
                        args.depth,
-                       args.dilation_growth_rate)
+                       args.dilation_growth_rate,
+                       args.vq_act,
+                       args.vq_norm, )
 
 
 trans_encoder = trans.Text2Motion_Transformer(net,
@@ -85,18 +102,31 @@ trans_encoder = trans.Text2Motion_Transformer(net,
                                 drop_out_rate=args.drop_out_rate, 
                                 fc_rate=args.ff_rate)
 
+if args.resume_pth:
+    print(f'loading checkpoint from {args.resume_pth}')
+    ckpt = torch.load(args.resume_pth, map_location='cpu')
+    state_dict = ckpt['net']
 
-print ('loading checkpoint from {}'.format(args.resume_pth))
-ckpt = torch.load(args.resume_pth, map_location='cpu')
-net.load_state_dict(ckpt['net'], strict=True)
-net.eval()
-net.cuda()
+    # 合并 P1 P2 权重逻辑
+    key_p1 = "fk_layers.p1_positions_lookup.weight"
+    key_p2 = "fk_layers.p2_positions_lookup.weight"
+    new_key = "fk_layers.unified_positions_lookup.weight"
+    if key_p1 in state_dict and key_p2 in state_dict:
+        print("Merging p1 and p2 lookup weights into unified_positions_lookup...")
+        p1_weight = state_dict.pop(key_p1)
+        p2_weight = state_dict.pop(key_p2)
+        combined_weight = torch.cat([p1_weight, p2_weight], dim=0)
+        state_dict[new_key] = combined_weight
+
+    net.load_state_dict(state_dict, strict=True)
+    net.eval()  # VQVAE 始终 Eval
+    net.cuda(1)
 
 if args.resume_trans is not None:
     print ('loading transformer checkpoint from {}'.format(args.resume_trans))
     ckpt = torch.load(args.resume_trans, map_location='cpu')
     trans_encoder.load_state_dict(ckpt['trans'], strict=True)
-trans_encoder.train()
+trans_encoder.eval()
 trans_encoder.cuda()
 
 

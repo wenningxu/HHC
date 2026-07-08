@@ -37,6 +37,7 @@ class Encoder(nn.Module):
             blocks.append(block)
         blocks.append(nn.Conv1d(width, output_emb_width, 3, 1, 1))
         self.model = nn.Sequential(*blocks)
+        # print('model encoder: ', self.model)
 
     def forward(self, x):
         return self.model(x)

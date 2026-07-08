@@ -4,12 +4,12 @@ def get_args_parser():
     parser = argparse.ArgumentParser(description='Optimal Transport AutoEncoder training for Amass',
                                      add_help=True,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
+    parser.add_argument('--device', type=str, default='cuda:1')
     ## dataloader
     
-    parser.add_argument('--dataname', type=str, default='t2m', help='dataset directory')
-    parser.add_argument('--batch-size', default=128, type=int, help='batch size')
-    parser.add_argument('--fps', default=[20], nargs="+", type=int, help='frames per second')
+    parser.add_argument('--dataname', type=str, default='hhi', help='dataset directory')
+    parser.add_argument('--batch-size', default=64, type=int, help='batch size')
+    parser.add_argument('--fps', default=[30], nargs="+", type=int, help='frames per second')
     parser.add_argument('--seq-len', type=int, default=64, help='training motion length')
     
     ## optimization
@@ -24,8 +24,8 @@ def get_args_parser():
     parser.add_argument('--optimizer',default='adamw', type=str, choices=['adam', 'adamw'], help='disable weight decay on codebook')
     
     ## vqvae arch
-    parser.add_argument("--code-dim", type=int, default=32, help="embedding dimension")
-    parser.add_argument("--nb-code", type=int, default=8192, help="nb of embedding")
+    parser.add_argument("--code-dim", type=int, default=256, help="embedding dimension")
+    parser.add_argument("--nb-code", type=int, default=12288, help="nb of embedding")
     parser.add_argument("--mu", type=float, default=0.99, help="exponential moving average to update the codebook")
     parser.add_argument("--down-t", type=int, default=2, help="downsampling rate")
     parser.add_argument("--stride-t", type=int, default=2, help="stride size")
@@ -34,6 +34,9 @@ def get_args_parser():
     parser.add_argument("--dilation-growth-rate", type=int, default=3, help="dilation growth rate")
     parser.add_argument("--output-emb-width", type=int, default=512, help="output embedding width")
     parser.add_argument('--vq-act', type=str, default='relu', choices = ['relu', 'silu', 'gelu'], help='dataset directory')
+    parser.add_argument('--vq-norm', type=str, default=None, help='dataset directory')
+    parser.add_argument('--motion_rep', type=str, default='raw', help='dataset directory')
+
 
     ## gpt arch
     parser.add_argument("--block-size", type=int, default=51, help="seq len")
@@ -44,7 +47,9 @@ def get_args_parser():
     parser.add_argument("--n-head-gpt", type=int, default=16, help="nb of heads")
     parser.add_argument("--ff-rate", type=int, default=4, help="feedforward size")
     parser.add_argument("--drop-out-rate", type=float, default=0.1, help="dropout ratio in the pos encoding")
-    
+    parser.add_argument("--contact", type=bool, default=False, help="contact off")
+    parser.add_argument("--shape", type=bool, default=True, help="contact off")
+
     ## quantizer
     parser.add_argument("--quantizer", type=str, default='ema_reset', choices = ['ema', 'orig', 'ema_reset', 'reset'], help="eps for optimal transport")
     parser.add_argument('--quantbeta', type=float, default=1.0, help='dataset directory')
@@ -61,12 +66,18 @@ def get_args_parser():
     ## other
     parser.add_argument('--print-iter', default=200, type=int, help='print frequency')
     parser.add_argument('--eval-iter', default=10000, type=int, help='evaluation frequency')
-    parser.add_argument('--seed', default=123, type=int, help='seed for initializing training. ')
+    parser.add_argument('--seed', default=114514, type=int, help='seed for initializing training. ')
     parser.add_argument("--if-maxtest", action='store_true', help="test in max")
     parser.add_argument('--pkeep', type=float, default=.5, help='keep rate for gpt training')
     
     ## generator
     parser.add_argument('--text', type=str, help='text')
     parser.add_argument('--length', type=int, help='length')
+    parser.add_argument("--generate-only", action='store_true', help='only run generation/export')
+    parser.add_argument("--gen-ckpt", type=str, default=None, help='checkpoint for t2i generation/export')
+    parser.add_argument("--gen-split", type=str, default='val', choices=['val', 'test'], help='dataset split for generation/export')
+    parser.add_argument("--num-repeat", type=int, default=30, help='number of multimodal samples per text')
+    parser.add_argument("--save-dir", type=str, default=None, help='output directory for generation/export')
+    parser.add_argument("--save-embeddings", action='store_true', help='save motion embeddings alongside motions')
 
     return parser.parse_args()

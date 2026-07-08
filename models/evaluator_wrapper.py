@@ -6,7 +6,7 @@ from models.modules import MovementConvEncoder, TextEncoderBiGRUCo, MotionEncode
 from utils.word_vectorizer import POS_enumerator
 
 def build_models(opt):
-    movement_enc = MovementConvEncoder(opt.dim_pose-4, opt.dim_movement_enc_hidden, opt.dim_movement_latent)
+    movement_enc = MovementConvEncoder(opt.dim_pose, opt.dim_movement_enc_hidden, opt.dim_movement_latent)
     text_enc = TextEncoderBiGRUCo(word_size=opt.dim_word,
                                   pos_size=opt.dim_pos_ohot,
                                   hidden_size=opt.dim_text_hidden,
@@ -35,6 +35,8 @@ class EvaluatorModelWrapper(object):
             opt.dim_pose = 263
         elif opt.dataset_name == 'kit':
             opt.dim_pose = 251
+        elif opt.dataset_name == 'hhi' or opt.dataset_name == 'hhi_shape':
+            opt.dim_pose = 56 * 12
         else:
             raise KeyError('Dataset not Recognized!!!')
 
@@ -45,6 +47,9 @@ class EvaluatorModelWrapper(object):
         opt.max_text_len = 20
         opt.dim_text_hidden = 512
         opt.dim_coemb_hidden = 512
+        if opt.dataset_name == 'hhi':
+            opt.max_motion_length = 150
+            opt.max_text_len = 35
 
         # print(opt)
 
@@ -67,13 +72,18 @@ class EvaluatorModelWrapper(object):
             pos_ohot = pos_ohot.detach().to(self.device).float()
             motions = motions.detach().to(self.device).float()
 
+            align_idx = np.argsort(m_lens.data.tolist())[::-1].copy()
+            motions = motions[align_idx]
+            m_lens = m_lens[align_idx]
+
             '''Movement Encoding'''
-            movements = self.movement_encoder(motions[..., :-4]).detach()
+            movements = self.movement_encoder(motions).detach()
             m_lens = m_lens // self.opt.unit_length
             motion_embedding = self.motion_encoder(movements, m_lens)
 
             '''Text Encoding'''
             text_embedding = self.text_encoder(word_embs, pos_ohot, cap_lens)
+            text_embedding = text_embedding[align_idx]
         return text_embedding, motion_embedding
 
     # Please note that the results does not following the order of inputs
@@ -86,7 +96,7 @@ class EvaluatorModelWrapper(object):
             m_lens = m_lens[align_idx]
 
             '''Movement Encoding'''
-            movements = self.movement_encoder(motions[..., :-4]).detach()
+            movements = self.movement_encoder(motions).detach()
             m_lens = m_lens // self.opt.unit_length
             motion_embedding = self.motion_encoder(movements, m_lens)
         return motion_embedding

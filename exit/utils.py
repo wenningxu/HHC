@@ -12,6 +12,8 @@ import shutil
 import datetime
 import os
 import math
+from typing import Dict, List
+from torch import Tensor
 
 kit_bone = [[0, 11], [11, 12], [12, 13], [13, 14], [14, 15], [0, 16], [16, 17], [17, 18], [18, 19], [19, 20], [0, 1], [1, 2], [2, 3], [3, 4], [3, 5], [5, 6], [6, 7], [3, 8], [8, 9], [9, 10]]
 t2m_bone = [[0,2], [2,5],[5,8],[8,11],
@@ -235,6 +237,15 @@ def get_range(skeleton, index):
 def generate_src_mask(T, length):
     B = len(length)
     mask = torch.arange(T).repeat(B, 1).to(length.device) < length.unsqueeze(-1)
+    return mask
+
+def lengths_to_mask(lengths: List[int],
+                    device: torch.device,
+                    max_len: int = None) -> Tensor:
+    lengths = torch.tensor(lengths, device=device)
+    max_len = max_len if max_len else max(lengths)
+    mask = torch.arange(max_len, device=device).expand(
+        len(lengths), max_len) < lengths.unsqueeze(1)
     return mask
 
 def copyComplete(source, target):

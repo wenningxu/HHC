@@ -66,3 +66,17 @@ UPPER_JOINT_Y_MASK = np.concatenate(([False]*(1+2+1),
                                 ALL_JOINT_FALSE[1:].repeat(6),
                                 ALL_JOINT_FALSE.repeat(3),
                                 [False] * 4))
+
+HHI_ROOT_ONLY_MASK = (np.array([True]).repeat(12))
+HHI_ROOT_ONLY_MASK_OLD = np.concatenate((np.array([True]).repeat(3), np.array([False]).repeat(3), np.array([True]).repeat(3), np.array([False]).repeat(3)))
+HHI_BODY_ROOT_MASK = np.concatenate((np.array([True]).repeat(22*12), np.array([False]).repeat(33*12), HHI_ROOT_ONLY_MASK))
+HHI_HAND_ROOT_MASK = np.concatenate((np.array([False]).repeat(25*12), np.array([True]).repeat(30*12), HHI_ROOT_ONLY_MASK))
+HHI_BODY_MASK = np.concatenate((np.array([True]).repeat(22*12), np.array([False]).repeat(33*12), np.array([False]).repeat(12)))
+HHI_HAND_MASK = np.concatenate((np.array([False]).repeat(25*12), np.array([True]).repeat(30*12), np.array([False]).repeat(12)))
+HHI_ROOT_MASK = np.concatenate((np.array([False]).repeat(55*12), HHI_ROOT_ONLY_MASK))
+HHI_ROOT_MASK_OLD = np.concatenate((np.array([False]).repeat(55*12), HHI_ROOT_ONLY_MASK_OLD))
+HHI_WHOLE_MASK = np.concatenate((np.array([True]).repeat(22*12), np.array([False]).repeat(3*12), np.array([True]).repeat(30*12), HHI_ROOT_ONLY_MASK_OLD))
+
+SMPLX_BODY_MASK = np.concatenate((np.array([True]).repeat(22*6), np.array([False]).repeat(33*6), np.array([False]).repeat(6)))
+SMPLX_HAND_MASK = np.concatenate((np.array([False]).repeat(25*6), np.array([True]).repeat(30*6), np.array([False]).repeat(6)))
+SMPLX_ROOT_MASK = np.concatenate((np.array([False]).repeat(55*6), np.array([True]).repeat(3), np.array([False]).repeat(3)))
