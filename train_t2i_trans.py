@@ -9,11 +9,10 @@ import math
 import time
 
 import options.option_transformer as option_trans
-from models.vqvae_sep3_shape import VQVAE_SEP3_shape
+from models.model_tools import build_model
 import utils.utils_model as utils_model
 import utils.eval_trans as eval_trans
 from dataset import dataset_interx_TM, dataset_interx_tokenize
-from models.two_person_transformer import Text2Motion_Transformer
 from options.get_eval_option import get_opt
 from models.evaluator_wrapper import EvaluatorModelWrapper
 import warnings
@@ -193,31 +192,10 @@ class MaskGITLightning(pl.LightningModule):
         self.clip_model = TextCLIP(clip_model)
 
         # VQVAE
-        self.net = VQVAE_SEP3_shape(args,
-                                    args.nb_code,
-                                    args.code_dim,
-                                    args.output_emb_width,
-                                    args.down_t,
-                                    args.stride_t,
-                                    args.width,
-                                    args.depth,
-                                    args.dilation_growth_rate,
-                                    args.vq_act,
-                                    args.vq_norm)
+        self.net = build_model(args, "interx_vq")
 
         # Transformer
-        self.trans_encoder = Text2Motion_Transformer(vqvae=self.net,
-                                                     num_vq=args.nb_code,
-                                                     embed_dim=args.embed_dim_gpt,
-                                                     clip_dim=args.clip_dim,
-                                                     block_size=args.block_size,
-                                                     num_layers=args.num_layers,
-                                                     num_local_layer=args.num_local_layer,
-                                                     n_head=args.n_head_gpt,
-                                                     drop_out_rate=args.drop_out_rate,
-                                                     fc_rate=args.ff_rate,
-                                                     contact=args.contact,
-                                                     shape=args.shape)
+        self.trans_encoder = build_model(args, "interx_transformer", vqvae=self.net)
 
         # ------------------
         # 2. 加载权重 (Resume Logic)
@@ -765,8 +743,7 @@ if __name__ == '__main__':
         # 这里的 net 初始化只是为了生成 codebook，可以用 cpu 或 gpu
         # 为了简单，我们手动跑一下这部分逻辑，或者把它也封装进 LightningModule (略显复杂)
         # 这里保持原样，手动跑
-        net = VQVAE_SEP3_shape(args, args.nb_code, args.code_dim, args.output_emb_width, args.down_t, args.stride_t,
-                               args.width, args.depth, args.dilation_growth_rate, args.vq_act, args.vq_norm)
+        net = build_model(args, "interx_vq")
         if args.resume_pth:
             ckpt = torch.load(args.resume_pth, map_location='cpu')
             state_dict = ckpt['net']

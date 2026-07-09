@@ -12,7 +12,7 @@ import utils.losses as losses
 import utils.utils_model as utils_model
 from dataset import dataset_chi3d
 from exit.utils import init_save_folder
-from models.vqvae_sep3_shape import VQVAE_SEP3_Chi3DShape
+from models.model_tools import build_model
 from utils.chi3d_vis import ensure_dir, run_vq_sample_export
 
 
@@ -66,10 +66,7 @@ sample_loader = dataset_chi3d.DATALoader(
 )
 sample_batch = next(iter(sample_loader))
 
-net = VQVAE_SEP3_Chi3DShape(
-    args, args.nb_code, args.code_dim, args.output_emb_width, args.down_t, args.stride_t,
-    args.width, args.depth, args.dilation_growth_rate, args.vq_act, args.vq_norm
-)
+net = build_model(args, "chi3d_vq")
 net.train().to(device)
 
 optimizer = optim.AdamW(net.parameters(), lr=args.lr, betas=(0.9, 0.99), weight_decay=args.weight_decay)

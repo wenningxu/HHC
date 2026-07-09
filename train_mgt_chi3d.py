@@ -14,8 +14,7 @@ import options.option_transformer as option_trans
 import utils.utils_model as utils_model
 from dataset import dataset_chi3d
 from exit.utils import init_save_folder, generate_src_mask
-from models.two_person_transformer import Chi3DActionTransformer
-from models.vqvae_sep3_shape import VQVAE_SEP3_Chi3DShape
+from models.model_tools import build_model
 from utils.chi3d_vis import build_fixed_chi3d_templates, ensure_dir, run_mgt_sample_export
 
 
@@ -123,10 +122,7 @@ logger.info(
     f"| output_emb_width {args.output_emb_width} | down_t {args.down_t} | stride_t {args.stride_t}"
 )
 
-vqvae = VQVAE_SEP3_Chi3DShape(
-    args, args.nb_code, args.code_dim, args.output_emb_width, args.down_t, args.stride_t,
-    args.width, args.depth, args.dilation_growth_rate, args.vq_act, args.vq_norm
-)
+vqvae = build_model(args, "chi3d_vq")
 if args.resume_pth:
     vqvae.load_state_dict(vq_ckpt["net"], strict=False)
 vqvae.eval().to(device)
@@ -153,18 +149,7 @@ train_loader = torch.utils.data.DataLoader(
 )
 sample_templates = build_fixed_chi3d_templates(train_set.action_to_id)
 
-net = Chi3DActionTransformer(
-    vqvae=vqvae,
-    num_actions=num_actions,
-    num_groups=3,
-    num_vq=args.nb_code,
-    embed_dim=args.embed_dim_gpt,
-    block_size=args.block_size - 1,
-    num_layers=args.num_layers,
-    n_head=args.n_head_gpt,
-    drop_out_rate=args.drop_out_rate,
-    fc_rate=args.ff_rate,
-).to(device)
+net = build_model(args, "chi3d_action_transformer", vqvae=vqvae, num_actions=num_actions).to(device)
 
 optimizer = utils_model.initial_optim(args.decay_option, args.lr, args.weight_decay, net, args.optimizer)
 scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.lr_scheduler, gamma=args.gamma)
