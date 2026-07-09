@@ -11,7 +11,7 @@ import utils.losses as losses
 import options.option_vq as option_vq
 import utils.utils_model as utils_model
 from dataset import dataset_VQ, dataset_TM_eval, dataset_interx, dataset_interx_TM, dataset_interx_tokenize
-import utils.eval_trans as eval_trans
+from archive.diffusion_mld import eval_diffusion
 from options.get_eval_option import get_opt
 from models.evaluator_wrapper import EvaluatorModelWrapper
 import warnings
@@ -21,7 +21,7 @@ from tqdm import tqdm
 from exit.utils import get_model, generate_src_mask, init_save_folder
 from models.vqvae_sep import VQVAE_SEP, VQVAE_SEP_shape, VQVAE_SEP3_shape, VAE_CNN, VAE_SHAPE_CNN
 from models.vqvae_hi import HumanVQVAEHI
-from models.vqtrans import DualPersonMldVAE, MldVae, MldVaeSeparate
+from archive.diffusion_mld.vqtrans import DualPersonMldVAE, MldVae, MldVaeSeparate
 from utils.rotation2xyz import Rotation2xyz_x
 def update_lr_warm_up(optimizer, nb_iter, warm_up_iter, lr):
 

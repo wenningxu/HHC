@@ -1,7 +1,7 @@
 from diffusion import gaussian_diffusion as gd
 from diffusion.respace import SpacedDiffusion, space_timesteps
 from diffusion.resample import create_named_schedule_sampler
-from models.vqtrans import AutoMldVae
+from archive.diffusion_mld.vqtrans import AutoMldVae
 from models.vqvae_sep import VAE_CNN, VAE_SHAPE_CNN
 from models.mld_denoiser import DenoiserTransformer, DenoiserTransformerFull, DiffusionForcingTransformer
 import options.option_diffusion as option_diffusion
@@ -335,7 +335,7 @@ class LitInteraction(L.LightningModule):
 
     def on_validation_epoch_end(self) -> None:
         sample_fn = self.ddim_diffusion.diffusion_forcing_ddim_sample_loop
-        self.fid, self.best_fid, self.best_iter, self.best_div, self.best_top1, self.best_top2, self.best_top3, self.best_matching = eval_trans.evaluation_diffusion(
+        self.fid, self.best_fid, self.best_iter, self.best_div, self.best_top1, self.best_top2, self.best_top3, self.best_matching = eval_diffusion.evaluation_diffusion(
             'results/training_df', self.trainer.val_dataloaders, self.denoiser_model_avg, self.vae, sample_fn, self.clip_model, self.global_step, self.best_fid, self.best_iter, self.best_div, self.best_top1, self.best_top2,
             self.best_top3, self.best_matching, eval_wrapper=self.eval_wrapper, primitive=False, forcing=True, savenpy=True)
         self.log('Validation/FID', self.fid, prog_bar=True, batch_size=self.args.batch_size)

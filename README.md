@@ -53,7 +53,7 @@ python optimize_chi3d_gt.py
 python optimize_full_body.py
 ```
 
-Diffusion/MLD experiments are archived under:
+Diffusion/MLD experiments, including their VAE variants, denoisers, classifier-free sampler, and diffusion evaluation helper, are archived under:
 
 ```text
 archive/diffusion_mld/

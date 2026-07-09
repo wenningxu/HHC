@@ -282,7 +282,7 @@ class LitInteraction(L.LightningModule):
     def on_validation_epoch_end(self) -> None:
         sample_fn = self.ddim_diffusion.ddim_sample_loop
         inference_model = self.denoiser_model_avg if self.args.ema_decay > 0 else self.denoiser_model
-        self.fid, self.best_fid, self.best_iter, self.best_div, self.best_top1, self.best_top2, self.best_top3, self.best_matching = eval_trans.evaluation_diffusion(
+        self.fid, self.best_fid, self.best_iter, self.best_div, self.best_top1, self.best_top2, self.best_top3, self.best_matching = eval_diffusion.evaluation_diffusion(
             self.args.out_dir, self.trainer.val_dataloaders, inference_model, self.vae, sample_fn, self.clip_model, self.global_step, self.best_fid, self.best_iter, self.best_div, self.best_top1, self.best_top2,
             self.best_top3, self.best_matching, eval_wrapper=self.eval_wrapper, forcing=False, primitive=False, savenpy=False)
         self.log('Validation/FID', self.fid, prog_bar=True, batch_size=self.args.batch_size)
