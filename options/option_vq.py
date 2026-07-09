@@ -1,18 +1,18 @@
 import argparse
 
 def get_args_parser():
-    parser = argparse.ArgumentParser(description='Optimal Transport AutoEncoder training for AIST',
+    parser = argparse.ArgumentParser(description='Two-person VQ-VAE training',
                                      add_help=True,
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--device', type=str, default='cuda:0')
     ## dataloader
-    parser.add_argument('--dataname', type=str, default='kit', help='dataset directory')
+    parser.add_argument('--dataname', type=str, default='chi3d', help='dataset name')
     parser.add_argument('--batch-size', default=256, type=int, help='batch size')
     parser.add_argument('--window-size', type=int, default=64, help='training motion length')
     parser.add_argument('--num_primitive', type=int, default=4, help='training motion length')
     parser.add_argument('--history_length', type=int, default=3, help='training motion length')
     parser.add_argument('--future_length', type=int, default=12, help='training motion length')
-    parser.add_argument('--motion_rep', type=str, default='vel', help='motion root representation')
+    parser.add_argument('--motion_rep', type=str, default='raw', help='motion root representation')
 
     ## optimization
     parser.add_argument('--total-iter', default=300000, type=int, help='number of total iterations to run')
@@ -71,6 +71,6 @@ def get_args_parser():
     parser.add_argument('--vis-gt', action='store_true', help='whether visualize GT motions')
     parser.add_argument('--nb-vis', default=20, type=int, help='nb of visualizations')
 
-    parser.add_argument('--sep-uplow', action='store_true', help='whether visualize GT motions')
+    parser.add_argument('--sep-uplow', action='store_true', help='use upper/lower ablation path')
 
     return parser.parse_args()

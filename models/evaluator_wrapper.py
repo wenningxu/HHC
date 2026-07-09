@@ -31,14 +31,10 @@ class EvaluatorModelWrapper(object):
 
     def __init__(self, opt):
 
-        if opt.dataset_name == 't2m':
-            opt.dim_pose = 263
-        elif opt.dataset_name == 'kit':
-            opt.dim_pose = 251
-        elif opt.dataset_name == 'hhi' or opt.dataset_name == 'hhi_shape':
+        if opt.dataset_name == 'hhi' or opt.dataset_name == 'hhi_shape':
             opt.dim_pose = 56 * 12
         else:
-            raise KeyError('Dataset not Recognized!!!')
+            raise KeyError(f'Unsupported evaluator dataset: {opt.dataset_name}')
 
         opt.dim_word = 300
         opt.max_motion_length = 196
