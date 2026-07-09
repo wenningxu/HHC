@@ -12,6 +12,31 @@ The active code paths are focused on:
 
 Legacy single-person MMM/HumanML/KIT entry scripts and the bundled Text2Motion training/evaluation package have been removed from the active tree.
 
+## Model Layout
+
+Selected active model implementations:
+
+```text
+models/vqvae_sep3_shape.py
+models/two_person_transformer.py
+```
+
+Compatibility export modules are kept for older imports:
+
+```text
+models/vqvae_sep.py
+models/t2i_trans.py
+```
+
+Ablation and experimental variants are archived separately:
+
+```text
+models/vq_ablation/
+models/transformer_ablation/
+```
+
+Shared low-level modules such as encoders, decoders, quantizers, ResNet blocks, cross-attention blocks, and positional encodings remain in the top-level `models/` package.
+
 ## Main Entrypoints
 
 ```bash
