@@ -21,15 +21,12 @@ models/vqvae_sep3_shape.py
 models/two_person_transformer.py
 ```
 
-Compatibility export modules are kept for older imports:
+Compatibility export modules are kept for older imports (used by the archived diffusion experiments):
 
 ```text
 models/vqvae_sep.py
-models/t2i_trans.py
 models/vqvae.py
 models/vqvae_hi.py
-models/vqtrans.py
-models/t2m_trans_uplow.py
 ```
 
 Ablation and experimental variants are archived separately:
