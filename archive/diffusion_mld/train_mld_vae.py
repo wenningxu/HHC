@@ -18,7 +18,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from utils.word_vectorizer import WordVectorizer
 from tqdm import tqdm
-from exit.utils import get_model, generate_src_mask, init_save_folder
+from utils.runtime import get_model, generate_src_mask, init_save_folder
 from models.vqvae_sep import VQVAE_SEP, VQVAE_SEP_shape, VQVAE_SEP3_shape, VAE_CNN, VAE_SHAPE_CNN
 from models.vqvae_hi import HumanVQVAEHI
 from archive.diffusion_mld.vqtrans import DualPersonMldVAE, MldVae, MldVaeSeparate

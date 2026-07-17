@@ -8,7 +8,7 @@ from scipy import linalg
 
 # import visualization.plot_3d_global as plot_3d
 from utils.motion_process import recover_from_ric, MotionNormalizerTorchInterX, recover_interx, MotionNormalizerTorchInterXSingle, recover_interx_from_features, prepare_interx
-from exit.utils import get_model, visualize_2motions, generate_src_mask
+from utils.runtime import get_model, visualize_2motions, generate_src_mask
 from tqdm import tqdm
 
 def tensorborad_add_video_xyz(writer, xyz, nb_iter, tag, nb_vis=4, title_batch=None, outname=None):

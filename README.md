@@ -41,14 +41,18 @@ Legacy single-person KIT/HumanML VQ models and older transformer/VAE experiments
 ## Main Entrypoints
 
 ```bash
-python train_t2i_trans.py
-python train_vq_chi3d.py
-python train_mgt_chi3d.py
-python generate.py
-python generate_mm_samples.py
-python optimize_chi3d_gt.py
-python optimize_full_body.py
+python train/train_t2i_trans.py
+python train/train_vq_chi3d.py
+python train/train_mgt_chi3d.py
+python gen/generate.py
+python gen/generate_mm_samples.py
+python optimize/optimize_chi3d_gt.py
+python optimize/optimize_full_body.py
 ```
+
+Run from the repository root — scripts resolve `./dataset/`, `./body_models/`, and `./output/` relative to the current working directory.
+
+Additional evaluation and contact-extraction entrypoints live under `eval/` (`calc_pene_from_npz.py`, `filter_pene_and_compute_mmodality.py`, `extract_val_contacts.py`, `rank_final_demo_metrics.py`, `pene.py`), and shared geometry/SMPL-X helpers live under `tools/` (`test_data.py`). Shared runtime helpers (masking, save-folder setup, sampling schedules, plotly visualization) are in `utils/runtime.py`.
 
 Diffusion/MLD experiments, including their VAE variants, denoisers, classifier-free sampler, and diffusion evaluation helper, are archived under:
 

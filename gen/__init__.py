@@ -1,0 +1,1 @@
+"""gen entrypoint package."""

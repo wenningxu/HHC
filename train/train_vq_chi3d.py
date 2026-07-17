@@ -11,7 +11,7 @@ import options.option_vq as option_vq
 import utils.losses as losses
 import utils.utils_model as utils_model
 from dataset import dataset_chi3d
-from exit.utils import init_save_folder
+from utils.runtime import init_save_folder
 from models.model_tools import build_model
 from utils.chi3d_vis import ensure_dir, run_vq_sample_export
 

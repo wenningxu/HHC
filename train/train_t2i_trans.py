@@ -20,7 +20,7 @@ import warnings
 warnings.filterwarnings('ignore')
 from tqdm import tqdm
 import wandb
-from exit.utils import generate_src_mask, init_save_folder
+from utils.runtime import generate_src_mask, init_save_folder
 from einops import rearrange
 import torch.nn.functional as F
 from utils.word_vectorizer import WordVectorizer

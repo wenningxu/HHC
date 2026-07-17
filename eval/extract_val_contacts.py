@@ -6,7 +6,7 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from optimization.text_2_regiens import ContactExtractor
+from optimization.text_2_regions import ContactExtractor
 from utils.paramUtil import CANDIDATES
 
 

@@ -13,7 +13,7 @@ import wandb
 import options.option_transformer as option_trans
 import utils.utils_model as utils_model
 from dataset import dataset_chi3d
-from exit.utils import init_save_folder, generate_src_mask
+from utils.runtime import init_save_folder, generate_src_mask
 from models.model_tools import build_model
 from utils.chi3d_vis import build_fixed_chi3d_templates, ensure_dir, run_mgt_sample_export
 

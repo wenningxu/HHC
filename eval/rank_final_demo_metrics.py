@@ -3,7 +3,7 @@ import csv
 import math
 from pathlib import Path
 
-from calc_pene_from_npz import PeneCalculator
+from eval.calc_pene_from_npz import PeneCalculator
 
 
 SHAPE_DIRS = {

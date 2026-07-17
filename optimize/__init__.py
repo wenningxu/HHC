@@ -1,0 +1,1 @@
+"""optimize entrypoint package."""

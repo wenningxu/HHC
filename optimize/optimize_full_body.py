@@ -3,14 +3,14 @@ import torch
 import torch.optim as optim
 from tqdm import tqdm  # 推荐安装 tqdm 用来显示进度条
 from optimization.losses import DyadicInteractionLoss
-from optimization.text_2_regiens import ContactExtractor
+from optimization.text_2_regions import ContactExtractor
 import copy
 import os
 import codecs as cs
 from os.path import join as pjoin
 from utils.paramUtil import CANDIDATES
 from utils.motion_process import get_spatial_min_interaction_label_single, keep_longest_and_ramp
-from test_data import _compute_geometry
+from tools.test_data import _compute_geometry
 import time
 
 def optimize_full_body(

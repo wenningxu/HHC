@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import clip
 from models.trans_encdec import PositionEmbeddingSine1D, TimestepEmbedder
-from exit.utils import generate_src_mask, lengths_to_mask
+from utils.runtime import generate_src_mask, lengths_to_mask
 
 class DenoiserTransformer(nn.Module):
     def __init__(self,

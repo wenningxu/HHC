@@ -16,7 +16,7 @@ from tqdm import tqdm
 import options.option_transformer as option_trans
 from dataset import dataset_interx_TM
 from options.get_eval_option import get_opt
-from train_t2i_trans import MaskGITLightning
+from train.train_t2i_trans import MaskGITLightning
 from utils.motion_process import MotionNormalizerTorchInterX, recover_interx
 from utils.word_vectorizer import WordVectorizer
 from models.evaluator_wrapper import EvaluatorModelWrapper

@@ -1,13 +1,13 @@
 import smplx
 from VolumetricSMPL import attach_volume
-from optimize_full_body import smplx_2_amass
+from optimize.optimize_full_body import smplx_2_amass
 import numpy as np
 import os
 import torch
 import codecs as cs
 from tqdm import tqdm
 from optimization.losses import DyadicInteractionLoss, vertex_normals
-from optimization.text_2_regiens import ContactExtractor
+from optimization.text_2_regions import ContactExtractor
 from utils.paramUtil import CANDIDATES
 from optimization.human_body_prior.body_model.body_model import BodyModel
 import pickle as pkl

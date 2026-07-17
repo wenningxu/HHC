@@ -8,8 +8,8 @@ import h5py
 import numpy as np
 import torch
 
-from optimize_full_body import create_trapezoidal_mask, optimize_full_body
-from test_data import _compute_geometry
+from optimize.optimize_full_body import create_trapezoidal_mask, optimize_full_body
+from tools.test_data import _compute_geometry
 from utils.paramUtil import CANDIDATES
 
 

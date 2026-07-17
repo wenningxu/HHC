@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 
-from calc_pene_from_npz import PeneCalculator
+from eval.calc_pene_from_npz import PeneCalculator
 from models.evaluator_wrapper import EvaluatorModelWrapper
 from options.get_eval_option import get_opt
 from utils.eval_trans import calculate_R_precision

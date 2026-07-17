@@ -1,16 +1,41 @@
+import argparse
 import torch
 import numpy as np
-from test_data import _compute_geometry, smplx_2_amass
+from tools.test_data import _compute_geometry, smplx_2_amass
 import codecs as cs
-from train_t2i_trans import MaskGITLightning
+from train.train_t2i_trans import MaskGITLightning
 from os.path import join as pjoin
 import os
 from time import time
 from tqdm import tqdm
 
 if __name__ == '__main__':
-    model = MaskGITLightning.load_from_checkpoint(
-        'output/t2i_trans/2026-02-13-01-55-15_vq_mask_gen_4_ablation_adalnshape_1_cfg/model-step=280000-val/FID=0.1605.ckpt', eval_wrapper=None, val_loader=None, map_location="cuda:1")
+    # Load the Lightning checkpoint by constructing the model from its saved
+    # hyper-parameters and applying the state_dict manually. This avoids
+    # MaskGITLightning.load_from_checkpoint, which resolves the class via the
+    # pickled module path (train_t2i_trans.MaskGITLightning) that no longer
+    # matches after the module moved into the train/ subpackage.
+    ckpt_path = 'output/t2i_trans/2026-02-13-01-55-15_vq_mask_gen_4_ablation_adalnshape_1_cfg/model-step=280000-val/FID=0.1605.ckpt'
+    device = 'cuda:1'
+    ckpt = torch.load(ckpt_path, map_location=device)
+    args = ckpt.get('hyper_parameters') or ckpt.get('hparams')
+    if isinstance(args, dict):
+        args = argparse.Namespace(**args)
+    # Build the model structure without triggering __init__'s own resume
+    # loading — the full trained weights are restored from this ckpt's
+    # state_dict below, so the standalone resume_pth/resume_trans paths saved
+    # in the hyper-parameters are not needed (and may not exist locally).
+    args.resume_pth = None
+    args.resume_trans = None
+    if not getattr(args, 'device', None):
+        args.device = device
+    model = MaskGITLightning(args, eval_wrapper=None, val_loader=None)
+    # Load the full Lightning state_dict (net *, trans_encoder *, clip_model *)
+    # to restore the exact trained weights, matching what load_from_checkpoint did.
+    state_dict = ckpt['state_dict']
+    missing, unexpected = model.load_state_dict(state_dict, strict=False)
+    print(f'checkpoint loaded with {len(missing)} missing and {len(unexpected)} unexpected keys')
+    model = model.to(device)
     model.eval()
     text_folder = 'dataset/interx/texts_processed'
     betas_folder = 'dataset/interx/betas'

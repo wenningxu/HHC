@@ -7,7 +7,7 @@ import torch
 from scipy import linalg
 
 from utils.motion_process import MotionNormalizerTorchInterX, recover_interx
-from exit.utils import get_model
+from utils.runtime import get_model
 from tqdm import tqdm
 
 @torch.no_grad()        

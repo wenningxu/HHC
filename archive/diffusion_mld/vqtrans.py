@@ -2,7 +2,7 @@ import torch.nn as nn
 from models.encdec import Encoder, Decoder
 from models.quantize_cnn import QuantizeEMAReset, Quantizer, QuantizeEMA, QuantizeReset
 from models.motion_transformer import Decoder_Transformer, Encoder_Transformer
-from exit.utils import generate_src_mask, lengths_to_mask
+from utils.runtime import generate_src_mask, lengths_to_mask
 import torch
 import torch.distributions as D
 from torch import Tensor

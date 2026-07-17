@@ -10,7 +10,7 @@ from options.get_eval_option import get_opt
 from models.evaluator_wrapper import EvaluatorModelWrapper
 from dataset import dataset_VQ, dataset_TM_eval, dataset_interx, dataset_interx_TM
 from utils.word_vectorizer import WordVectorizer
-from exit.utils import init_save_folder
+from utils.runtime import init_save_folder
 from utils.motion_process import MotionNormalizerTorchInterX
 from utils.rotation_conversions import *
 

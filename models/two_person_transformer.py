@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from exit.utils import cosine_schedule, gumbel_sample, generate_src_mask
+from utils.runtime import cosine_schedule, gumbel_sample, generate_src_mask
 from models.pos_encoding import PositionEmbedding
 from models.trans_encdec import PositionEmbeddingSine1D
 from models.motion_transformer import Block, Block_crossatt, AdaBlock
