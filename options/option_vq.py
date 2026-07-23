@@ -6,7 +6,7 @@ def get_args_parser():
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--device', type=str, default='cuda:0')
     ## dataloader
-    parser.add_argument('--dataname', type=str, default='chi3d', help='dataset name')
+    parser.add_argument('--dataname', type=str, default='hhi', help='dataset name (hhi=InterX two-person)')
     parser.add_argument('--batch-size', default=256, type=int, help='batch size')
     parser.add_argument('--window-size', type=int, default=64, help='training motion length')
     parser.add_argument('--num_primitive', type=int, default=4, help='training motion length')

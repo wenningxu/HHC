@@ -100,27 +100,6 @@ class MotionNormalizerTorchInterX():
         x = x * self.motion_std.to(device) + self.motion_mean.to(device)
         return x
 
-
-class MotionNormalizerTorchChi3D():
-    def __init__(self):
-        mean = np.load("./dataset/chi3d/stats/Chi3D_Mean_root.npy")
-        std = np.load("./dataset/chi3d/stats/Chi3D_Std_root.npy")
-
-        self.motion_mean = torch.from_numpy(mean).float()
-        self.motion_std = torch.from_numpy(std).float()
-
-    def forward(self, x):
-        device = x.device
-        x = x.clone()
-        x = (x - self.motion_mean.to(device)) / self.motion_std.to(device)
-        return x
-
-    def backward(self, x, global_rt=False):
-        device = x.device
-        x = x.clone()
-        x = x * self.motion_std.to(device) + self.motion_mean.to(device)
-        return x
-
 class MotionNormalizerTorchInterXSingle():
     def __init__(self):
         mean = np.load("./dataset/interx/Mean.npy")

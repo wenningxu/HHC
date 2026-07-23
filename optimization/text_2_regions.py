@@ -1,6 +1,12 @@
-from google import genai
-from google.genai import types
 import os
+
+# google-genai is only needed when ContactExtractor actually talks to the
+# Gemini API for live contact-region extraction. Import lazily inside __init__
+# so the module (and its many non-LLM consumers: optimize_full_body,
+# eval/extract_val_contacts, ...) imports cleanly without the dependency or
+# network access being present.
+genai = None
+types = None
 
 
 class ContactExtractor:
@@ -8,7 +14,12 @@ class ContactExtractor:
         """
         初始化 Gemini 客户端
         """
-        self.client = genai.Client(api_key=api_key)
+        global genai, types
+        from google import genai as _genai
+        from google.genai import types as _types
+        genai = _genai
+        types = _types
+        self.client = _genai.Client(api_key=api_key)
         self.model_name = model_name
 
 

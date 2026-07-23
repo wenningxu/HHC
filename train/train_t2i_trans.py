@@ -1,4 +1,11 @@
 import os
+import sys
+
+# Allow running as `python train/train_t2i_trans.py` from repo root by putting
+# the repo root on sys.path before importing project packages.
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 import torch
 import numpy as np
@@ -710,6 +717,7 @@ if __name__ == '__main__':
     args.resume_pth = f'{args.vq_dir}/net_175000.pth'
     os.makedirs(args.vq_dir, exist_ok=True)
     os.makedirs(codebook_dir, exist_ok=True)
+    os.makedirs(f'{args.vq_dir}/contact_token_label', exist_ok=True)
     os.makedirs(args.out_dir, exist_ok=True)
 
     # Logger

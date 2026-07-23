@@ -8,14 +8,15 @@ dependencies:
   - python=3.12
   # === 核心修复 ===
   # 强制指定 CUDA 12.1，避开系统底层的 CUDA 11 冲突
-  - pytorch-cuda=12.1
+  - pytorch-cuda=12.8
   - pytorch
   - torchvision
   - torchaudio
   # 必须安装 toolkit，否则没有 nvcc，PyTorch3D 无法编译
-  - cuda-toolkit=12.1
+  - cuda-toolkit=12.8
 
   # === 常用科学计算库 ===
+  - lightning
   - matplotlib
   - numpy
   - scipy

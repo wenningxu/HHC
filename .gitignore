@@ -23,6 +23,11 @@ dataset/KIT-ML/
 dataset/interx/
 dataset/chi3d/
 glove/
+# Raw / extracted data archives and checkpoints shipped locally (never commit)
+dataset/*.zip
+dataset/*.tar.gz
+dataset/*.h5
+checkpoints/
 
 # Model checkpoints and generated training artifacts
 checkpoints/
