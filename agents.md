@@ -1,5 +1,7 @@
 # 持久化协作偏好
 
+2026-10-20 原185k VQ已从恢复连接的Edmond找回并CPU验收，115068263B/SHA08ba7d0d...2f8d608；107状态张量严格加载通过，normalizer与当前170k逐字节相同。原训练清单10项源码指纹中7项匹配现版，3项差异已从迁移前归档找回匹配版本。历史native重建FID2.4238196未重跑，不是新生成质量结果。当前170k冻结spec及A4000绑定不改，不直接替换码本，不重复旧失联资产搜索。仅云CPU，未下载本机权重/数组。详见 docs/historical_vq185k_recovery_20261020.md。
+
 - 2026-10-20 Edmond 迁移已验收：官方 InterGen 从 Runpod 完整262240步状态恢复；新262592步 checkpoint（196项optimizer）再次CPU验收通过。主算力为免费 newstation / edmond-Z790-Taichi，实际目录 /mnt/8T-HDD/wenning/hhc_migration_20261020/workspace/HHC，使用同级 edmond_runtime_namespace.py 保留 /workspace 路径。trainer138991/35423489；HHC/eval等待139371/35441518、139469/35450774；watch139818/35465491；两个下游CPU等待139470、139471。所有PID以实际LAUNCH/STATUS核验。Runpod不再作为主算力，禁止自动恢复；控制面停机结果见 output/edmond_migration_20261020/runpod_stop_receipt.json 和 migration/control/compute-owner.json。两automation保持PAUSED，HHC4000与官方704k+真实20rep/MM+独立review门槛不变。后续改动须提交并推送GitHub，同步Edmond旧项目与实际runtime。Runpod停机保留本次版本；若将来获授权启用，须先拉取同一最新提交，不得为例行同步自动启动付费实例。无新FID，无本机权重/数组下载。详见 docs/edmond_migration_20261020.md。
 
 - 2026-10-20 用户已授权迁回免费 Edmond，并要求 Edmond/Runpod/GitHub 三方代码同步。newstation 已恢复可达，/mnt/8T-HDD 可用693GiB，两4090初查空闲。当前迁移正在进行，独立目录 /mnt/8T-HDD/wenning/hhc_migration_20261020，旧HHC目录保留；直接云到云复制，不落本机权重。先静态文件、完整检查点和Edmond续训验收，再停付费Runpod；勿在迁移中重启旧custom或旧Runpod恢复器。详见 docs/edmond_migration_20261020.md；该迁移安排覆盖旧“持续留Runpod”安排。HHC4000及官方704k+20rep/MM+独立review门槛保持。
