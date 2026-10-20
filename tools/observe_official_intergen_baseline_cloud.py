@@ -6,7 +6,9 @@ def proc(pid):
  p=Path('/proc')/str(pid)
  try:
   fields=(p/'stat').read_text().rsplit(')',1)[1].split()
-  return {'pid':pid,'state':fields[0],'birth':fields[19],'cpu_ticks':int(fields[11])+int(fields[12]),'command':(p/'cmdline').read_bytes().replace(b'\0',b' ').decode(),'cwd':str((p/'cwd').resolve())}
+  try:cwd=str((p/'cwd').resolve())
+  except PermissionError:cwd=None  # Separate user namespaces can deny cwd even for the same host user.
+  return {'pid':pid,'state':fields[0],'birth':fields[19],'cpu_ticks':int(fields[11])+int(fields[12]),'command':(p/'cmdline').read_bytes().replace(b'\0',b' ').decode(),'cwd':cwd}
  except FileNotFoundError:return None
 
 def observe():

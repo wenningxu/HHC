@@ -24,6 +24,12 @@ def main():
     r=json.loads(receipt.read_text())
     source=json.loads((MIG/'checkpoint_acceptance.json').read_text())
     assert r['sha256']==source['sha256'] and r['step']==source['step']
+    model_dir=RUN/'official_intergen_scratch_20261017/model'
+    model_dir.mkdir(parents=True,exist_ok=True)
+    restored_model=model_dir/Path(r['snapshot']).name
+    if not restored_model.exists():
+        os.link(r['snapshot'],restored_model)
+    assert os.path.samefile(restored_model,r['snapshot'])
     assert json.loads((MIG/'freeze_receipt.json').read_text())['status']=='source_trainer_suspended_pending_destination_acceptance'
     preflight=json.loads((MIG/'destination_preflight.json').read_text())
     assert preflight['dataset_rows']==11274 and preflight['updates_per_epoch']==352

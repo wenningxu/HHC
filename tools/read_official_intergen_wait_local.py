@@ -47,6 +47,12 @@ def main():
     path = ROOT/'migration/control/compute-owner.json'
     before = path.read_bytes()
     owner = json.loads(before)
+    migration = owner.get('migration', {})
+    if migration and migration.get('status') != 'complete':
+        print(json.dumps({'status': 'migration_in_progress', 'not_observed': True,
+                          'migration_status': migration.get('status'),
+                          'note': 'Use the explicit handoff receipts; do not restart either host.'}))
+        return
     due = dt.datetime.fromisoformat(owner['next_ordinary_observation_not_before_utc'])
     if not args.force and dt.datetime.now(dt.timezone.utc) < due:
         print(json.dumps({'status': 'not_due', 'not_observed': True, 'next_ordinary_observation_not_before_utc': due.isoformat()}))

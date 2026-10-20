@@ -15,6 +15,7 @@ def command(arguments):
         '--bind', '/mnt', '/mnt', '--bind', '/run', '/run',
         '--dir', '/tmp', '--bind', str(BASE/'workspace'), '/workspace',
         '--dir', '/root', '--setenv', 'HOME', '/root',
+        '--setenv', 'MPLBACKEND', 'Agg',
         '--setenv', 'PATH', '/workspace/runtime-bin:/opt/hhc-env/bin:/usr/local/bin:/usr/bin:/bin',
         '--bind', str(BASE/'python38'),
         '/root/.local/share/uv/python/cpython-3.8.20-linux-x86_64-gnu',
