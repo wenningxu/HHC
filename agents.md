@@ -1,5 +1,51 @@
-# Agent Notes
+# 持久化协作偏好
 
-- Always execute repository commands from the external terminal workflow.
-- Always use `conda run -n New_MMM ...` for repository commands.
-- The verified conda environment name is `New_MMM`.
+- 2026-10-20 17:56 SGT：云端容器重启后的完整恢复已验收。 原进程全部缺失、255552半文件已隔离保留，从完整255200恢复；新增外层Lightning ckpt_path完整状态恢复并补执行原pending epoch scheduler hook，保留原官方源码/磁盘配置和激活包装。冻结YACS CPU对照与实际首批/196项optimizer/计数通过；恢复后的新255552完整checkpoint再验通过（2701620469B/SHA cf983bfe...cab8a2），仅留云。tmpfs原压缩包SHA、每人7777文件/15558 eval链接及官方Dataset11274/352 CPU验证通过；两个未更新失败attempt均保留。当前trainer1282/3987440，HHC/eval1486/3999646、1490/4003594，watch1491/4003597，下游1506/4003941与1507/4003959，全为实测身份。后续使用tools/read_official_intergen_wait_local.py消费既有watch与实际/proc，勿依赖临时functions store。两automation只更新prompt，仍PAUSED/频率目标保持；HHC4000与final704k+真实20rep/MM+独立review门槛保持。无新FID/SOTA证据，无本机权重/数组下载。详见docs/intergen_official_reproduction_20261017.md顶部及output/hhc_sota_20261016/official_recovery_*_20261020.json。 只跟随当前LAUNCH/STATUS，不使用历史PID或重放旧custom bootstrap。
+
+- 2026-10-18 22:52 SGT 新padding边界审计已验收： 官方VEL/FC只检查前一帧mask，纳入有效末帧→第一padding差分。云CPU抽取真实AST，8合成+1实际train3292/80帧共9例exit0；有效预测=GT、仅首padding+1m时VEL=.374999962/padding梯度.749999924，独立双端mask候选均0。合成1cm接触例亦复现；FC受预测门控限制。旧custom已双端有效，此项不解释其FID退化；当前官方/排队绑定源未改、无新质量结果。source/report SHA独立读回通过，session32827 exit0；第一次诊断epsilon容差断言失败保留，不当模型失败。详见docs/intergen_bug_audit_20261017.md顶部和intergen_padding_velocity_cpu_20261018.json。仅云CPU/小JSON源码，本机新增权重数组0，HHC4000及官方优先保持。 不在源无变化时重复同一审计。
+
+- 2026-10-17 用户再次“检查bug”：新确认镜像caption顺序replace令counterclockwise→countercounterclockwise，官方/旧custom/HHC adapter共有，不能解释两者FID差距。云CPU全5637交互/16911描述影响60交互/150描述（均匀抽样+镜像约0.4435%），6合成例+全描述三处真实AST对照，原97960 exit0；source/report SHA独立读回通过，CUDA未初始化。docs/intergen_mirror_text_bug_20261017.md。修正候选仅独立audit脚本内，官方复现及HHC绑定源都未改；不要源不变重复扫描或把这项宣称FID改善。官方29Python与固定提交完全相同，wrapper SHA不变，22675/25145/26133实际身份正确，队列仍waiting；HHC4000/automations PAUSED/云端GPU及禁本机权重数组下载保持。
+
+- 2026-10-17 官方first10k里程碑：15:19:55 UTC固定observer trainer22675/birth467827326到epoch29/10560，GPU仅22675/7880MiB；9780→10560含日志/保存约.81062秒/更新。滚动10560 checkpoint仅stat未CPU内容验收，无FID。原CPU观察21986与HHC/eval等待25145/26133保持，automation两项本轮prompt已更新但仍PAUSED。本机metadata中的旧35.239/best24.314归旧custom记录，官方FID null。下一普通训练观察≥15:29:55 UTC，不逐分钟轮询；无新质量结果不重复来源审计或相同负结果。监控切换证据ZIP434666B/SHA5e102a27...cde94c3f，Drive1T5thB23dP1ZtVGvkSp1OoFSUbXjuAl2D；包早于10560，首10k小快照另存。HHC saved4000、GPU仅云端、本机新增checkpoint/数组0、goal active/SOTA未验证。
+
+- 2026-10-17 官方monitor切换实际修复已验收：docs/official_intergen_monitor_transition_20261017.md。hhc/hhc-runpod两个既有automation原id更新prompt到官方baseline+25145/26133+final704k真实20rep/MM独立review，逐字段仅prompt/updated_at改变，PAUSED/name/频率/原target/created_at均保持，不启用。新请求migration/control/official-intergen-automation-updates.json为当前提示证据，旧intergen-fast-automation-updates.json仅历史勿重放。本机compute-owner旧custom35.239/best24.314已归previous_custom_validation_metrics，官方顶层FID均null；现行HHC/eval等待PID/control正确。本机runpod-idle更新为实际官方+CPU队列观察，这两metadata原本无远端副本，不凭空创建云端控制；旧localcontroller进程匹配0。6项云/本机核心绑定源和config SHA不变。官方15:09:23 UTC/9780，GPU仅22675，25145/26133/21986实际S且等待无phase/child/intent；下次普通observer≥15:19:23 UTC。HHC4000、GPU仅云端、本机新权重/数组0，SOTA未验证。
+
+- 2026-10-17 最新前沿源码核验：docs/interhuman_frontier_source_audit_20261017.md，ARMS固定e381917的默认InterHuman entry无GT prefix（云CPU字面AST+synthetic stubs通过，无真实网络/权重/质量结果），full-window4.436仅文献，不能把所有AR模型归为GT历史条件。其原MM默认关闭，开启batch2/repeat3会索引越界，未来独立prompt/repeat exporter；不改当前绑定源。HF kksix/arms匿名401、真实权重未验；HINT OpenReview CGALrQfkYi代码附件端点403未取得，初始化仍未知；不绕过访问限制、不在源不变时重复相同失败搜索。CPU8586 exit0、源与3701B报告SHA独立读回通过；90937替身类型失败/29778本机CRLF验收差异均保留不作质量结果。官方14:58:06 UTC/8920/GPU仅22675；下一普通观察≥15:08:06 UTC。HHC4000、25145/26133等待及automation PAUSED保持，GPU仅云端、本机新增checkpoint/数组0。
+
+- 2026-10-17 最新public资产来源已独立核验：public_baseline_asset_routes_raw_verified_20261017.json为真实API字段/作者身份/响应SHA；旧public_baseline_asset_routes_20261017.json只是assistant概述，不可原文引用。新public_baseline_comparison_identity_20261017.json重哈希3条旧480val报告，区分public TIMotion Transformer+LPA与paper RWKV4.702；CoSh仍无匹配独立权重，HF名称/作者搜索及论文关联模型检查为空（仅所列范围）。不要在源无变化时重复相同资产搜索；不能用InterGen或strict=False加载填CoSh复现行。官方最近14:36:27 UTC/7300，GPU仅22675；25145/26133实际/proc仍S/waiting，HHC4000、两automation PAUSED保持。下一普通观察≥14:46:27 UTC。详见docs/hhc_sota_interhuman_20261016.md顶部与末尾。
+
+- **2026-10-17 22:29 SGT：InterGen时间/样本reduction独立CPU反例已验收。** 除已确认稀疏空间分母错误，旧custom按micro4池化有效帧后平均组，官方几何项则先每序列平均、再平均t≤700的有效序列。抽取两侧真实reducer AST，5个合成算例exit0：长度6/2/6/2、逐帧平方误差1/9/1/9时官方5、custom3；跨组有效样本数不同可导致官方2.6/custom5，梯度权重同步改变；仅一个micro4组有效的极端构造为1/.125，不作为实际训练典型8倍缩小。等长全有效/全无效控制通过，padding与无效梯度0。sparse_v2只修空间分母，明确仍保留该时间权重差异，不能称整个objective等价官方。没有新修正版接入、重训或FID证据。详见docs/intergen_temporal_reduction_20261017.md；原exec71376终态exit0、独立SSH读回源和报告SHA一致，CUDA未初始化。官方最近14:23:16 UTC/epoch17/step6310/total.19，GPU仅22675/7880MiB，HHC saved4000及两CPU队列保持；下一普通观察≥14:33:16 UTC，继续官方基线优先，goal active/SOTA未验证。
+
+- 2026-10-17 HHC END容量边界独立CPU诊断已完成exit0：docs/hhc_end_token_boundary_20261017.md。训练76位置含END，采样75位置在最长75-token请求缺END（35/480 val）；实际A4000、3交互×2mask、12例表明PAD控制logits完全相同，补END的CFG teacher-forced NLL 1好/5差，均值+0.00404。只有局部布局差异证据，无FID收益，不晋升/不修改已绑定训练与五候选队列，不重复按此猜主因。官方训练最近5350，next ordinary observer≥14:20:44 UTC。GPU仅云端，HHC仍saved4000，25145/26133排队与PAUSED automations不变。
+
+- 2026-10-17 官方eval20执行队列已安装验收：CPU waiter26133/birth468171108，tools/run_official_intergen_reproduction_cloud.py（SHAf4794c59946074660a29ef04d4cf25d8ad9805d7814227d472cb11ab81767ba0），migration/control/official-intergen-eval20-after-final.json（云migration/同名，SHAe3b524eaccdc0168b577c8c35be436426fe49d144b0325b9c3cdf0b551317158）。保留HHC waiter25145作唯一最终704k CPU验收；26133随后只在训练终态/无GPU作业时执行未改官方eval.py，20rep+MM完成后只产report/log，不自动产review收据。等真实结果独立审查后25145才续A4000。禁止改写已绑定源码/独立eval数据视图或重放已写launch intent的评测。当前最新4370步、暂无FID；详见docs/intergen_official_reproduction_20261017.md。旧“eval队列尚待准备”已覆盖；automation仍PAUSED，GPU仅云端，无本机checkpoint下载。
+
+- 2026-10-17 新官方基线后的HHC队列已安装并验收：CPU waiter25145/birth468066055，tools/resume_hhc_after_official_intergen_cloud.py（SHA8e61c066cd2061955d707a463970e917e24d585ff34619d4665ce3d7d40d64ab），migration/control/hhc-after-official-intergen-resume.json（云migration/同名，SHAcc58d8299bef03b751fd7c22cf98e9aa0ed3ed14d9c210bf9969e2f653050c2f）。官方704k最终完整checkpoint+trainer终态+真实原始20rep/MM审查通过才继续A4000/B/C；不可仅看到训练退出或旧customcomplete就放行。launch-intent一旦写入即禁止自动重放phase。新的CPU等待器可仅在尚无phase/exitcode/intent、原PID+birth已终态时按--recover-waiting恢复；旧20042/20344不恢复。原始eval执行队列尚待准备，门控不能视为有评测结果。两项automation保持PAUSED。
+
+- 2026-10-17 最新用户已明确：保存并暂停自定义旋转/FK实验，先复现官方InterGen基线，并检查bug。此指令覆盖旧InterGen自定义704k跑满门控；旧20042已在103000完整状态校验后有意终止，旧本机恢复器104244/云HHC等待20344停止，禁止自动恢复旧run。HHC仍保存4000排队，不擅自启动。新官方基线准备/诊断以docs/LOCAL_CONTINUATION.md最新记录为准。所有GPU仍仅云端，不新增本机checkpoint下载。
+
+- 2026-10-17 用户质疑4090速度后正在部署同一InterGen实验的性能续训。最新控制为output/intergen_fast_transition_control_20261017/STATUS.json，source为tools/train_intergen_rotation_fast_cloud.py（micro16×accum2，effective32；原micro4有效帧归一化分组由intergen_rotation_grouped_objective.py保留），不是新HHC GPU任务。迁移完成前后原2353/旧本机53968/旧CPU等待17952的有意退出不得按故障恢复旧版；新恢复器tools/local_runpod_control_fast.py→runpod_fast_bootstrap.sh，新HHC等待源resume_hhc_after_intergen_fast_v3_cloud.py及migration/control/hhc-after-fast-intergen-v3-resume.json（云migration/同名）严格complete704k+身份+最终checkpoint config及step+训练进程退出才续A4000。旧29源码保留，禁止本机权重下载。当前两项automation实际PAUSED，保持原状态，不擅自启用；最新PID以迁移STATUS及实际/proc为准。
+
+- 2026-10-17 例行独占状态观察使用独立只读工具tools/observe_intergen_priority_cloud.py --validation-step 60000，在SSH远端以CUDA_VISIBLE_DEVICES='' /opt/hhc-env/bin/python运行；仅解析其JSON，不再临时拼接监控脚本。GPU结果是明确pid/name/used_memory_mib，显存列不是PID。missing/incomplete不表示训练完成或可启动HHC，续训仍由原严格704k门控负责。
+
+- 2026-10-17 用户明确新算力优先级：InterGen独占当前云GPU，HHC在完整检查点保存后等待InterGen完整704000步结束。权威策略migration/control/hhc-compute-priority.json；不得在InterGen未complete/704000时恢复HHC训练/生成，原A/ABC预期为用户要求的有意暂停，不按故障自动重启。已完成VQ300k及冻结170k保留，不重训。下游纯CPU等待队列保留；未来只从已保存A checkpoint原step恢复，不从0重放。已执行：A保存4000步、原17259/7178有意退出，不能恢复旧ABC；新CPU等待器17952（tools/resume_hhc_after_intergen_cloud.py，migration/control/hhc-after-intergen-resume.json）仅在InterGen complete/704000、身份及最终checkpoint匹配且训练进程退出后，用--resume继续A再顺序B/C。仅等待阶段的队列自身意外退出可核对原PID确已终态、配置/源码不变且尚无运行phase后以--recover-waiting恢复，禁止重放已启动phase。
+
+- 2026-10-16 19:40 监控纠正：GPU利用率/显存/型号查询也必须在SSH远端执行（例如远端Python内部subprocess.run nvidia-smi）；禁止SSH结束后运行本机nvidia-smi并把它作为云端活动证据。任何本机GPU读数不得用于云端闲置判定或停机决策。
+
+- 2026-10-16 新最高优先级：任何GPU工作（训练、GPU推理/评测）仅在云端运行。本机只做CPU分析、代码和小型结果；本任务本地checkpoint上限一个，不继续新增下载。已有多个历史备份先保留，不擅自删除；当前禁止所有自动checkpoint下载，详见`migration/control/local-checkpoint-policy.json`。滚动恢复包留云端，后续云备份应云到云；此新用户要求覆盖旧“持续收取本机checkpoint”指令。
+
+- 2026-10-15 接管：权威开发/实验记录目录为本机`D:\projects\HHC`，先读`docs/LOCAL_CONTINUATION.md`与`docs/PROGRESS.md`。最新工作为InterGen旋转/FK从头训练704000步；下方旧shape采样指令仅保留历史，不覆盖最新任务。服务器edmond-personal通过SSH配置`newstation`仅承担算力，成果收取本机并备份Google Drive，持续失联时按已授权使用Runpod。云端上传必须有完整文件、大小/SHA256及读回验证；partial不算成功。远程实验命令使用已有`conda run -n New_MMM`；本机迁移/控制脚本使用已验证的Python运行时。
+
+- 2026-09-12最新地面要求：落地是为双人恢复合理共同物理平面，让ground loss不因坐标错误扭曲姿态；允许合理小偏差，不追逐1mm等自设完美阈值，不强制逐帧所有脚贴地。固定当前合理地面方案，完成物理检查后继续接触吸引验证；不要再无限叠加地面约束。
+- 用户已接受当前 VQ 质量“基本可以复现”，仍不得声称 bitwise 或十项全优。最新覆盖：用户已收束第①项采样探索并指示开始第②项公开shape augmentation；不要依据旧交接记录重启第①项。当前进展与活跃句柄以`docs/PROGRESS.md`顶部为准，第③④项按顺序后置；原复现限制和历史证据保留。
+
+- 记录日期：2026-09-09。仅当确有可并行的工作时，将简单、边界清晰且独立的任务（文件查找、日志/指标提取、例行检查、直接编辑）交给 subagent，并使用可用的低成本模型；默认 `gpt-5.6-luna`、低 reasoning。
+- 传给 subagent 的上下文保持最少：`fork none` 加精确任务。实验设计、复杂诊断、验收与集成由主 agent 负责；模型不可用时选最便宜的合适可用模型并披露，不能声称降级却未实际选择。
+- 避免为琐碎工作递归拆分。
+- 训练例行监控默认至少间隔10分钟，由已有低成本subagent或非阻塞后台监控负责；主agent不重复轮询。只在异常、验收节点或训练结束时汇报，无变化不写进度、不产生逐分钟模型唤醒。此规则不改变训练日志或验证频率。
+- 低频复核发现新验证结果时，报告 step、当前 FID 及历史最佳 step/FID；不要只报告进程存活，并明确区分训练内验证与冻结完整评分。
+- 完整 VQ 报告固定列出 10 项：RMSE、全身/身体/手部 MPJPE、root 误差、Full/Body/Hands joint FID、滑步、接触 F1；注明 step、seed、协议和单位，未完成项写“待评”。不得混用原生 FID，或按有利指标宣称成功。
+- 长任务返回 session_id/cell_id 或等待超时时，不得当作进程退出并重启；继续轮询原句柄。子 agent 必须报告原始句柄及确切 exit_code，主 agent 在缺少终态证据时用进程状态复核。
+- 主线程创建的exec session可能对子agent不可见：2026-09-12子agent访问17109返回Unknown process id，主agent同句柄可正常读取。遇此情况由创建会话的agent收取终态；子agent仅做PID只读检查或完成后的文件指标提取，不反复尝试接管、不把Unknown当退出。
+- 不得原地修改仍在运行的 shell 启动脚本；Bash 可能继续从文件读取，修改会导致收尾解析错误。等待终态后再编辑，或使用独立版本启动下一组。
+- 后续 HHC 工作维护 `docs/PROGRESS.md`，用中文简短记录进度；在实质动作、结果、启动/完成/失败或重要决策后及时更新，包含时间、做了什么/结果、当前任务与下一步。长任务记录句柄，并区分排队/运行/已验收；避免每次无变化轮询刷屏；详细实验保留在原诊断文档。

@@ -5,7 +5,21 @@ import math
 from utils.runtime import cosine_schedule, gumbel_sample, generate_src_mask
 from models.pos_encoding import PositionEmbedding
 from models.trans_encdec import PositionEmbeddingSine1D
-from models.motion_transformer import Block, Block_crossatt, AdaBlock
+from models.motion_transformer import AdaBlock, AdaCrossSelfBlock, Block, Block_crossatt
+
+
+def selected_log_odds(logits, selected):
+    """Stable log(p/(1-p)), including top-1 probabilities rounded to one."""
+    if logits.shape[-1] < 2 or not torch.isfinite(logits).all():
+        raise ValueError('finite logits with at least two classes required')
+    logits = logits.float()
+    best = logits.argmax(-1, keepdim=True)
+    log_total = logits.logsumexp(-1, keepdim=True)
+    chosen = logits.gather(-1, selected)
+    # Non-best p <= 1/2; explicitly exclude the best to avoid cancellation.
+    other = log_total + torch.log1p(-(chosen - log_total).exp().clamp_max(0.5))
+    other_best = logits.scatter(-1, best, -torch.inf).logsumexp(-1, keepdim=True)
+    return chosen - torch.where(selected == best, other_best, other)
 
 
 class CrossCondTransBase(nn.Module):
@@ -21,17 +35,39 @@ class CrossCondTransBase(nn.Module):
                  drop_out_rate=0.1,
                  fc_rate=4,
                  contact=False,
-                 shape=False):
+                 shape=False,
+                 paper_architecture=True,
+                 conditioning_contract='paper_text_cfg'):
         super().__init__()
         self.vqvae = vqvae
         self.num_vq = num_vq
         self.block_size = block_size
         self.num_local_layer = num_local_layer
         self.total_code_dim = vqvae.code_dim  # VQVAE 的总 latent 维度
-        # 计算 VQVAE 中各个部分的维度
-        self.upper_dim = int(self.total_code_dim * 3 / 8)
-        self.lower_dim = int(self.total_code_dim * 3 / 8)
-        self.root_dim = int(self.total_code_dim / 4)
+        self.paper_architecture = paper_architecture
+        self.conditioning_contract = conditioning_contract
+        if conditioning_contract not in {
+                'paper_text_cfg', 'historical_mmm_shape_dropout'}:
+            raise ValueError(
+                f'unknown conditioning contract: {conditioning_contract}'
+            )
+        # Inter-X uses the historical 3/8, 3/8, 1/4 allocation.  A dataset-
+        # specific VQ may expose the same three widths explicitly; binding to
+        # that contract prevents a silent embedding mismatch.
+        latent_dims = getattr(vqvae, 'latent_dims', None)
+        if latent_dims is None:
+            latent_dims = (
+                int(self.total_code_dim * 3 / 8),
+                int(self.total_code_dim * 3 / 8),
+                int(self.total_code_dim / 4),
+            )
+        latent_dims = tuple(int(value) for value in latent_dims)
+        if len(latent_dims) != 3 or sum(latent_dims) != self.total_code_dim:
+            raise ValueError(
+                f'VQ latent_dims must contain three widths summing to '
+                f'{self.total_code_dim}, got {latent_dims}'
+            )
+        self.upper_dim, self.lower_dim, self.root_dim = latent_dims
 
         # 为特殊 Token (End, Pad, Mask) 定义可学习的 Embedding
         # 需要为三个部分分别定义，以便拼接后维度正确
@@ -39,6 +75,11 @@ class CrossCondTransBase(nn.Module):
         self.learn_tok_emb_upper = nn.Embedding(3, self.upper_dim)
         self.learn_tok_emb_lower = nn.Embedding(3, self.lower_dim)
         self.learn_tok_emb_root = nn.Embedding(3, self.root_dim)
+        # The paper uses a shared learnable special token in the interleaved
+        # Root/Body/Hand stream. Legacy per-part embeddings remain available
+        # for loading old checkpoints.
+        if paper_architecture:
+            self.shared_special_emb = nn.Embedding(3, embed_dim)
 
         # 投影层：将拼接后的 (Upper+Lower+Root) 投影到 Transformer 的 embed_dim
         # self.to_emb = nn.Linear(self.total_code_dim, embed_dim)
@@ -54,6 +95,12 @@ class CrossCondTransBase(nn.Module):
             self.contact_drop_id = 2
 
         self.shape = shape
+        # In the historical conditioning contract this probability also masks
+        # the global CLIP feature (the legacy helper is misnamed
+        # ``mask_shape``).  It must therefore exist even when the MGT has no
+        # beta/gender branch.  Shape-enabled behavior remains byte-for-byte the
+        # same: 0.2 for the historical topology and 0.0 for paper AdaLN/CFG.
+        self.shape_mask_prob = 0.0 if paper_architecture else 0.2
         if shape:
             gender_emb_dim = 4
             shape_emb_dim = 40
@@ -66,9 +113,24 @@ class CrossCondTransBase(nn.Module):
                 nn.ReLU(),
                 nn.Linear(embed_dim, embed_dim)
             )
+            # Paper CFG removes text while retaining the requested body shape;
+            # no independent shape-drop condition is described for HHC-M.
+
+        if paper_architecture:
+            shape_condition_dim = (2 * 4 + 40) if shape else 0
+            self.paper_condition_mlp = nn.Sequential(
+                nn.Linear(clip_dim + shape_condition_dim, embed_dim),
+                nn.SiLU(),
+                nn.Linear(embed_dim, embed_dim),
+            )
+            self.paper_blocks = nn.ModuleList([
+                AdaCrossSelfBlock(embed_dim, block_size, n_head, drop_out_rate, fc_rate)
+                for _ in range(num_layers)
+            ])
+            self.blocks = nn.Sequential()
+        elif shape:
             self.blocks = nn.Sequential(*[AdaBlock(embed_dim, block_size, n_head, drop_out_rate, fc_rate) for _ in
                                           range(num_layers - num_local_layer)])
-            self.shape_mask_prob = 0.2
         else:
             self.blocks = nn.Sequential(*[Block(embed_dim, block_size, n_head, drop_out_rate, fc_rate) for _ in
                                           range(num_layers - num_local_layer)])
@@ -80,8 +142,9 @@ class CrossCondTransBase(nn.Module):
         # Transformer Blocks
         self.pos_embed = PositionEmbeddingSine1D(embed_dim, 0.0, block_size, True)
 
-        if num_local_layer > 0:
+        if num_local_layer > 0 or paper_architecture:
             self.word_emb = nn.Linear(clip_dim, embed_dim)
+        if num_local_layer > 0 and not paper_architecture:
             self.cross_att = nn.Sequential(
                 *[Block_crossatt(embed_dim, block_size, n_head, drop_out_rate, fc_rate) for _ in
                   range(num_local_layer)])
@@ -112,13 +175,17 @@ class CrossCondTransBase(nn.Module):
             return cond
 
     def mask_text(self, word_cond, cond, force_mask=False):
-        bs, t, d = cond.shape
+        bs = cond.shape[0]
         if force_mask:
             return torch.zeros_like(word_cond), torch.zeros_like(cond)
         elif self.training and self.text_drop_prob > 0.:
-            # print('masking cond')
-            mask = torch.bernoulli(torch.ones(bs, device=cond.device) * self.text_drop_prob).view(bs, 1, 1).bool()  # 1-> use null_cond, 0-> use real cond
-            return torch.where(mask,torch.zeros_like(word_cond),word_cond), torch.where(mask,torch.zeros_like(cond),cond)
+            mask = torch.bernoulli(
+                torch.ones(bs, device=cond.device) * self.text_drop_prob
+            ).bool()
+            word_mask = mask.view(bs, 1, 1)
+            cond_mask = mask.view(bs, *([1] * (cond.ndim - 1)))
+            return (torch.where(word_mask, torch.zeros_like(word_cond), word_cond),
+                    torch.where(cond_mask, torch.zeros_like(cond), cond))
         else:
             return word_cond, cond
 
@@ -183,6 +250,22 @@ class CrossCondTransBase(nn.Module):
             x_u = self.emb_proj_upper(emb_u)
             x_l = self.emb_proj_lower(emb_l)
             x_r = self.emb_proj_root(emb_r)
+            if self.paper_architecture:
+                if (~not_learn_u).any():
+                    special = self.shared_special_emb(
+                        idx_u[~not_learn_u] - self.num_vq
+                    ).to(dtype=x_u.dtype)
+                    x_u[~not_learn_u] = special
+                if (~not_learn_l).any():
+                    special = self.shared_special_emb(
+                        idx_l[~not_learn_l] - self.num_vq
+                    ).to(dtype=x_l.dtype)
+                    x_l[~not_learn_l] = special
+                if (~not_learn_r).any():
+                    special = self.shared_special_emb(
+                        idx_r[~not_learn_r] - self.num_vq
+                    ).to(dtype=x_r.dtype)
+                    x_r[~not_learn_r] = special
             time_pe = self.pos_embed(x_r)
 
 
@@ -193,7 +276,7 @@ class CrossCondTransBase(nn.Module):
             if (contact_mask is not None) and self.contact:
             # contact_mask shape: [B, T] (0 or 1)
             # c_emb shape: [B, T, D]
-                c_emb = self.contact_emb(self.mask_cond(contact_mask, force_mask=force_mask))
+                c_emb = self.contact_emb(self.mask_cond(contact_mask, force_mask=False))
 
                 # 广播加法：直接加到三个部位的 Embedding 上
                 # 这样每一帧的所有部位都带上了 "是否接触" 的 Context
@@ -205,30 +288,60 @@ class CrossCondTransBase(nn.Module):
             x_stack = torch.stack([x_r, x_u, x_l], dim=2)
             B, T, _, D = x_stack.shape
             token_embeddings = x_stack.view(B, T * 3, D)
-            # Cross Attention 处理
-            if self.num_local_layer > 0:
-                word_emb = self.word_emb(word_emb)
+            if self.conditioning_contract == 'paper_text_cfg':
+                word_emb, clip_feature = self.mask_text(
+                    word_emb, clip_feature, force_mask=force_mask
+                )
+            word_emb = self.word_emb(word_emb)
+
+            # Legacy pre-stack cross-attention path.
+            if self.num_local_layer > 0 and not self.paper_architecture:
                 # token_embeddings = self.pos_embed(token_embeddings)
                 for module in self.cross_att:
                     token_embeddings = module(token_embeddings, word_emb)
 
-            # 加上 Global Condition (CLIP Feature)
-            # 类似于 BERT 的 CLS token，这里作为第一个 token
-            clip_feature = self.mask_shape(clip_feature, force_mask=force_mask)
-            token_embeddings = torch.cat([self.cond_emb(clip_feature).unsqueeze(1), token_embeddings], dim=1)
+            # In the paper blocks, global CLIP and body shape modulate AdaLN;
+            # only the interleaved motion stream is self-attended.  The legacy
+            # architecture additionally prepended a CLIP condition token.
+            if not self.paper_architecture:
+                if self.conditioning_contract == 'historical_mmm_shape_dropout':
+                    clip_feature = self.mask_shape(
+                        clip_feature, force_mask=force_mask
+                    )
+                token_embeddings = torch.cat(
+                    [self.cond_emb(clip_feature).unsqueeze(1), token_embeddings], dim=1
+                )
 
         # 进入 Transformer Block
         x = token_embeddings
+        shape_condition = None
         if (betas is not None) and self.shape:
             gender_embeded = self.gender_embedding(gender).reshape(-1, 8)
-            shape_embeded = self.shape_projection(self.mask_shape(betas, force_mask=False))
-            combined = torch.cat([gender_embeded, shape_embeded], dim=1)
-            condition_vector = self.condition_mlp(combined)
-        for block in self.blocks:
-            if isinstance(block, AdaBlock):
-                x = block(x, condition_vector, src_mask)
-            else:
-                x = block(x, src_mask)
+            shape_embeded = self.shape_projection(self.mask_shape(
+                betas,
+                force_mask=(
+                    force_mask
+                    if self.conditioning_contract == 'historical_mmm_shape_dropout'
+                    else False
+                ),
+            ))
+            shape_condition = torch.cat([gender_embeded, shape_embeded], dim=1)
+
+        if self.paper_architecture:
+            paper_condition = clip_feature
+            if shape_condition is not None:
+                paper_condition = torch.cat([paper_condition, shape_condition], dim=1)
+            condition_vector = self.paper_condition_mlp(paper_condition)
+            for block in self.paper_blocks:
+                x = block(x, word_emb, condition_vector, src_mask)
+        else:
+            if shape_condition is not None:
+                condition_vector = self.condition_mlp(shape_condition)
+            for block in self.blocks:
+                if isinstance(block, AdaBlock):
+                    x = block(x, condition_vector, src_mask)
+                else:
+                    x = block(x, src_mask)
 
         return x
 
@@ -285,18 +398,31 @@ class Text2Motion_Transformer(nn.Module):
                  drop_out_rate=0.1,
                  fc_rate=4,
                  contact = False,
-                 shape=False):
+                 shape=False,
+                 paper_architecture=True,
+                 conditioning_contract='paper_text_cfg'):
         super().__init__()
         self.n_head = n_head
         self.num_vq = num_vq
         self.block_size = block_size
         self.shape = shape
+        self.paper_architecture = paper_architecture
+        self.conditioning_contract = conditioning_contract
 
         self.trans_base = CrossCondTransBase(vqvae, num_vq, embed_dim, clip_dim, block_size, num_layers,
-                                             num_local_layer, n_head, drop_out_rate, fc_rate, contact, shape)
-        self.trans_head = CrossCondTransHead(num_vq, embed_dim, block_size, num_layers, n_head, drop_out_rate, fc_rate)
+                                             num_local_layer, n_head, drop_out_rate, fc_rate, contact, shape,
+                                             paper_architecture, conditioning_contract)
+        # The paper reports nine transformer blocks total. The legacy model
+        # placed another nine self-attention blocks in the output head.
+        head_layers = 0 if paper_architecture else num_layers
+        self.trans_head = CrossCondTransHead(num_vq, embed_dim, block_size, head_layers, n_head, drop_out_rate, fc_rate)
 
     def get_attn_mask(self, src_mask, att_txt=None, att_shape=False):
+        if self.paper_architecture:
+            batch_size, sequence_length = src_mask.shape
+            return src_mask.view(batch_size, 1, 1, sequence_length).repeat(
+                1, self.n_head, sequence_length, 1
+            )
         if att_txt is None:
             att_txt = torch.tensor([[True]] * src_mask.shape[0]).to(src_mask.device)
         # 因为 input 多了一个 condition token，mask 也要加一位
@@ -319,6 +445,10 @@ class Text2Motion_Transformer(nn.Module):
             return self.sample_cascade(*args, **kwargs)
         elif type == 'sample_intra_cas':
             return self.sample_intra_cas(*args, **kwargs)
+        elif type == 'sample_intra_cas_repredict':
+            return self.sample_intra_cas_repredict(*args, **kwargs)
+        elif type == 'sample_intra_cas_historical':
+            return self.sample_intra_cas_historical(*args, **kwargs)
         else:
             raise ValueError(f'Unknown "{type}" type')
 
@@ -331,7 +461,8 @@ class Text2Motion_Transformer(nn.Module):
         feat = self.trans_base(idxs, clip_feature, src_mask, word_emb, contact_mask, betas, gender, force_mask)
         logits = self.trans_head(feat, src_mask)
         B = logits.shape[0]
-        logits = logits[:, 1:, :]
+        if not self.paper_architecture:
+            logits = logits[:, 1:, :]
         logits_reshaped = logits.view(B, -1, 3, logits.shape[-1])
         logits_root = logits_reshaped[:, :, 0, :]
         logits_upper = logits_reshaped[:, :, 1, :]
@@ -671,184 +802,403 @@ class Text2Motion_Transformer(nn.Module):
 
         return ids
 
-    def sample_intra_cas(self, clip_feature, word_emb, contact_mask=None, betas=None, gender=None, m_length=None, if_test=False, rand_pos=True, CFG=-1,
-               max_steps=3, vocab_contact_map=None, contact_guidance_scale=1.0, temperature=None):
-        # [INFO]
-        # Intra-Step Cascade Sampling
-        # 每个 Step 内部顺序：Root -> Body -> Hand
-        # 总推理次数 = max_steps * 3
+    def sample_intra_cas_historical(
+        self, clip_feature, word_emb, contact_mask=None, betas=None, gender=None,
+        m_length=None, if_test=False, rand_pos=True, CFG=-1, max_steps=10,
+        vocab_contact_map=None, contact_guidance_scale=5.0,
+    ):
+        """Byte-faithful 2026-02-13 development sampler for diagnostics only.
 
+        Unlike the repaired paper sampler below, every round re-predicts every
+        valid position in the active channel.  Keep this separate: it exists to
+        replay the historical training-validation RNG/output contract and must
+        never silently replace the formal common-50 sampler.
+        """
+        del if_test
         batch_size = clip_feature.shape[0]
         mask_id = self.num_vq + 2
         pad_id = self.num_vq + 1
         end_id = self.num_vq
+        cascade_order = [2, 0, 1]  # Root -> Body -> Hand
 
-        # =========================================================
-        # [配置] 通道顺序
-        # =========================================================
-        # 假设: 0=Upper(Body), 1=Lower(Hand), 2=Root
-        # 你的需求: Root -> Body -> Hand
-        root_ch_idx = 2
-        body_ch_idx = 0
-        hand_ch_idx = 1
-
-        # 定义步内级联顺序
-        cascade_order = [root_ch_idx, body_ch_idx, hand_ch_idx]
-
-        # =========================================================
-
-        # 初始化 ids: [B, T, 3] 全为 Mask
         shape = (batch_size, self.block_size - 1, 3)
-        ids = torch.full(shape, mask_id, dtype=torch.long, device=clip_feature.device)
-        scores = torch.ones(shape, dtype=torch.float32, device=clip_feature.device)
+        ids = torch.full(
+            shape, mask_id, dtype=torch.long, device=clip_feature.device
+        )
         if vocab_contact_map is not None:
-            # [3, V] -> [3, 1, 1, V] 方便后续广播
-            vocab_contact_map = vocab_contact_map.to(clip_feature.device).view(3, 1, 1, -1)
+            vocab_contact_map = vocab_contact_map.to(
+                clip_feature.device
+            ).view(3, 1, 1, -1)
+        contact_mask_tensor = (
+            None if contact_mask is None
+            else contact_mask.to(clip_feature.device).float()
+        )
 
-            # 确保 contact_mask 是 [B, T] 并且是 float 类型
-        if contact_mask is not None:
-            contact_mask_tensor = contact_mask.to(clip_feature.device).float()
-        else:
-            contact_mask_tensor = None
-
-        # 长度计算
-        m_tokens_len = torch.ceil((m_length) / 4).long()
-
-        # Mask 矩阵
-        src_token_mask = generate_src_mask(self.block_size - 1, m_tokens_len + 1)
-        src_token_mask_noend = generate_src_mask(self.block_size - 1, m_tokens_len)
-        src_token_mask_noend_3c = src_token_mask_noend.unsqueeze(-1).expand(-1, -1, 3)
-
-        # 填充 Pad 和 End
+        m_tokens_len = torch.ceil(m_length / 4).long()
+        src_token_mask = generate_src_mask(
+            self.block_size - 1, m_tokens_len + 1
+        )
+        src_token_mask_noend = generate_src_mask(
+            self.block_size - 1, m_tokens_len
+        )
         src_token_mask_3c = src_token_mask.unsqueeze(-1).expand(-1, -1, 3)
         ids[~src_token_mask_3c] = pad_id
-        for i in range(batch_size):
-            l = m_tokens_len[i]
-            if l < self.block_size - 1:
-                ids[i, l, :] = end_id
-
-        # =========================================================
-        # 主循环
-        # =========================================================
+        for batch_idx in range(batch_size):
+            token_len = m_tokens_len[batch_idx]
+            if token_len < self.block_size - 1:
+                ids[batch_idx, token_len, :] = end_id
 
         for step in range(max_steps):
-
-            # 1. 计算当前 Step 的 Mask 比例 (全局统一，或者你也可以给不同部位微调)
-            # 转为 Tensor 避免之前的报错
-            step_tensor = torch.tensor(step, device=clip_feature.device, dtype=torch.float32)
-            max_steps_tensor = torch.tensor(max_steps, device=clip_feature.device, dtype=torch.float32)
-
-            progress = (step_tensor + 1) / max_steps_tensor  # +1 确保最后一步是 1.0 (全不mask)
-            # cosine schedule: progress 0->1 implies prob 1->0
+            step_tensor = torch.tensor(
+                step, device=clip_feature.device, dtype=torch.float32
+            )
+            max_steps_tensor = torch.tensor(
+                max_steps, device=clip_feature.device, dtype=torch.float32
+            )
+            progress = (step_tensor + 1) / max_steps_tensor
             rand_mask_prob = cosine_schedule(progress)
-            current_guidance_scale = contact_guidance_scale * (1.0 - (step / max_steps))
-            # =====================================================
-            # [关键] 步内级联循环 (Intra-Step Loop)
-            # =====================================================
-            scores = []
-            for ch_idx in cascade_order:
+            current_guidance_scale = contact_guidance_scale * (
+                1.0 - (step / max_steps)
+            )
 
-                # A. Forward
-                # 此时的 ids 包含了：
-                # - 之前 steps 确定的 token
-                # - 本 step 刚刚更新过的 前置通道 token (例如预测 Body 时，Root 已经是新的了)
-
-                logits = self.forward_function(ids, clip_feature, src_token_mask, word_emb=word_emb,
-                                               contact_mask=contact_mask, betas=betas, gender=gender)
+            for channel in cascade_order:
+                logits = self.forward_function(
+                    ids, clip_feature, src_token_mask, word_emb=word_emb,
+                    contact_mask=contact_mask, betas=betas, gender=gender,
+                )
                 if CFG > 0:
-                    logits_uncond = self.forward_function(ids, clip_feature, src_token_mask, word_emb=word_emb,
-                                                   contact_mask=contact_mask, betas=betas, gender=gender, force_mask=True)
+                    logits_uncond = self.forward_function(
+                        ids, clip_feature, src_token_mask, word_emb=word_emb,
+                        contact_mask=contact_mask, betas=betas, gender=gender,
+                        force_mask=True,
+                    )
                     logits = logits_uncond + CFG * (logits - logits_uncond)
-                # B. 获取当前通道的 Logits 和 Probs
-                # logits: [B, T, 3, V] -> 取出当前 ch_idx
-                logits_ch = logits[:, :, ch_idx, :]  # [B, T, V]
-                if vocab_contact_map is not None and contact_mask_tensor is not None and current_guidance_scale > 0.2:
-                    # 1. 获取当前通道对应的 Codebook 属性 [1, 1, V]
-                    # ch_idx 0=Body, 1=Hand, 2=Root. 你的 npy 也是这个顺序 (3, V)
-                    vocab_attr = vocab_contact_map[ch_idx]
 
-                    # 2. 准备目标 Target [B, T, 1]
-                    # contact_mask_tensor: 1.0 表示要求接触, 0.0 表示要求分开
+                channel_logits = logits[:, :, channel, :]
+                if (
+                    vocab_contact_map is not None
+                    and contact_mask_tensor is not None
+                    and current_guidance_scale > 0.2
+                ):
+                    vocab_attr = vocab_contact_map[channel]
                     target = contact_mask_tensor.unsqueeze(-1)
+                    compatibility = (
+                        target * vocab_attr
+                        + (1.0 - target) * (1.0 - vocab_attr)
+                    )
+                    channel_logits = channel_logits + torch.log(
+                        compatibility + 1e-6
+                    ) * current_guidance_scale
 
-                    # 3. 计算“兼容性分数” (Compatibility Score)
-                    # 逻辑：
-                    # 如果 Target=1 (接触): 我们希望 vocab_attr (接触概率) 越大越好 -> Score = vocab_attr
-                    # 如果 Target=0 (分开): 我们希望 vocab_attr (接触概率) 越小越好 -> Score = 1 - vocab_attr
-                    # 公式合并:
-                    compatibility = target * vocab_attr + (1.0 - target) * (1.0 - vocab_attr)
+                # Historical gumbel_sample consumes RNG even when temperature
+                # is zero; preserving that call is part of the replay contract.
+                temperature = 1.0 if rand_pos else 0.0
+                predictions = gumbel_sample(
+                    channel_logits, temperature=temperature, dim=-1
+                )
+                probabilities = F.softmax(channel_logits, dim=-1)
+                confidence = probabilities.gather(
+                    -1, predictions.unsqueeze(-1)
+                ).squeeze(-1)
+                uncertainty = 1 - confidence
+                uncertainty[~src_token_mask_noend] = -1e9
 
-                    # 4. 转换为 Logit Bias
-                    # 加一个 epsilon 防止 log(0)
-                    # Logits += Scale * log(P_compatible)
-                    # 兼容性越高，Bias 越大 (接近0)；兼容性越低，Bias 越小 (负无穷)
-                    bias = torch.log(compatibility + 1e-6) * current_guidance_scale
+                num_masked = (
+                    rand_mask_prob * m_tokens_len
+                ).long().clip(min=0)
+                sorted_indices = uncertainty.sort(
+                    descending=True, dim=-1
+                ).indices
+                is_masked = torch.zeros_like(uncertainty, dtype=torch.bool)
+                for batch_idx in range(batch_size):
+                    count = num_masked[batch_idx]
+                    if count > 0:
+                        is_masked[
+                            batch_idx, sorted_indices[batch_idx, :count]
+                        ] = True
+                is_masked &= src_token_mask_noend
 
-                    # 5. 应用到 Logits
-                    logits_ch = logits_ch + bias
-
-                # C. 采样 (Gumbel / Argmax)
-                if rand_pos:
-                    current_temperature = 1.0 if temperature is None else float(temperature)
-                else:
-                    current_temperature = 0.
-
-                # [B, T]
-                pred_ids_ch = gumbel_sample(logits_ch, temperature=current_temperature, dim=-1)
-
-                # D. 计算当前通道的 Confidence (用于 MaskGIT 筛选)
-                probs_ch = F.softmax(logits_ch, dim=-1)  # [B, T, V]
-                token_probs_ch = probs_ch.gather(-1, pred_ids_ch.unsqueeze(-1)).squeeze(-1)  # [B, T]
-
-                # MaskGIT score: 1 - prob (越高越容易被 mask)
-                scores_ch = 1 - token_probs_ch
-
-                # 处理 Pad/End: 设为极小值(极高置信度)，保证不被 Mask
-                valid_mask_ch = src_token_mask_noend  # [B, T]
-                scores_ch[~valid_mask_ch] = -1e9
-                # 加噪
-                # if rand_pos:
-                #     noise = torch.rand_like(scores_ch) * 1e-6
-                #     scores_ch = scores_ch + noise
-
-                # E. 决定哪些位置需要 Mask
-                # 计算需要 mask 的数量 (基于当前 step 的全局进度)
-                flat_len_ch = m_tokens_len
-                num_token_masked_ch = (rand_mask_prob * flat_len_ch).long().clip(min=0)  # 允许为0
-
-                # 排序
-                _, sorted_indices = scores_ch.sort(descending=True, dim=-1)
-
-                # 生成 Mask
-                is_mask_ch = torch.zeros_like(scores_ch, dtype=torch.bool)
-                for b in range(batch_size):
-                    k = num_token_masked_ch[b]
-                    if k > 0:
-                        mask_indices = sorted_indices[b, :k]
-                        is_mask_ch[b, mask_indices] = True
-
-                # 保护 Pad
-                is_mask_ch = is_mask_ch & valid_mask_ch
-
-                # F. 立即更新 ids 中的当前通道
-                # 这样下一次循环 (下一个 ch_idx) 就能看到这里更新后的 token 了
-
-                # 先把当前通道全部更新为预测值
-                # (注意：MaskGIT 的标准做法是保留高置信度的，Mask 低置信度的)
-                # 这里的逻辑是：
-                # 1. 凡是 is_mask=True 的地方，填入 mask_id
-                # 2. 凡是 is_mask=False 的地方，填入 pred_ids_ch (即保留预测结果)
-
-                # 取出原来的 ids 通道
-                current_ids_ch = ids[:, :, ch_idx]
-
-                # 更新逻辑：
-                # 如果被 mask -> mask_id
-                # 如果没被 mask -> 使用刚刚预测的 pred_ids_ch (不管它原来是啥，因为我们相信新的预测更好)
-                new_ids_ch = torch.where(is_mask_ch, mask_id, pred_ids_ch)
-
-                # 写入回 ids
-                ids[:, :, ch_idx] = new_ids_ch
+                # This intentionally overwrites previously fixed positions.
+                ids[:, :, channel] = torch.where(
+                    is_masked, mask_id, predictions
+                )
 
         return ids
 
+    def sample_intra_cas(self, clip_feature, word_emb, contact_mask=None, betas=None, gender=None,
+                         m_length=None, if_test=False, rand_pos=True, CFG=-1, max_steps=3,
+                         vocab_contact_map=None, contact_guidance_scale=1.0, temperature=0.5,
+                         temperature_end=None, confidence_noise_scale=0.0,
+                         confidence_noise_scope='all', confidence_ranking='probability',
+                         channel_schedule='interleaved', confidence_noise_until_step=0):
+        """Default interleaved cascade; opt-in ranking and partwise diagnostics."""
+        del if_test
+        if max_steps < 1:
+            raise ValueError('max_steps must be positive')
+        if (type(confidence_noise_until_step) is not int
+                or not 0 <= confidence_noise_until_step <= max_steps):
+            raise ValueError('confidence_noise_until_step must be an integer in [0, max_steps]')
+        if confidence_ranking not in ('probability', 'log_odds', 'max_probability'):
+            raise ValueError('confidence_ranking must be probability, log_odds or max_probability')
+        if channel_schedule not in ('interleaved', 'partwise'):
+            raise ValueError('channel_schedule must be interleaved or partwise')
+        if not math.isfinite(confidence_noise_scale) or confidence_noise_scale < 0:
+            raise ValueError('confidence_noise_scale must be finite and nonnegative')
+        if confidence_noise_scope not in ('all', 'root'):
+            raise ValueError('confidence_noise_scope must be all or root')
+        batch_size = clip_feature.shape[0]
+        device = clip_feature.device
+        mask_id, pad_id, end_id = self.num_vq + 2, self.num_vq + 1, self.num_vq
+        cascade_order = (2, 0, 1)  # tensor channels are Body, Hand, Root
+
+        ids = torch.full(
+            (batch_size, self.block_size - 1, 3), mask_id,
+            dtype=torch.long, device=device,
+        )
+        m_tokens_len = torch.ceil(m_length / 4).long()
+        valid_mask = generate_src_mask(self.block_size - 1, m_tokens_len)
+        if self.paper_architecture:
+            src_token_mask = valid_mask
+            ids[~valid_mask.unsqueeze(-1).expand_as(ids)] = pad_id
+        else:
+            src_token_mask = generate_src_mask(self.block_size - 1, m_tokens_len + 1)
+            ids[~src_token_mask.unsqueeze(-1).expand_as(ids)] = pad_id
+            for batch_idx, token_len in enumerate(m_tokens_len.tolist()):
+                if token_len < self.block_size - 1:
+                    ids[batch_idx, token_len, :] = end_id
+
+        contact_target = None if contact_mask is None else contact_mask.to(device).float()
+        contact_probs = None
+        if vocab_contact_map is not None:
+            contact_probs = vocab_contact_map.to(device).float()
+            if contact_probs.shape != (3, self.num_vq):
+                raise ValueError(
+                    f"vocab_contact_map must be [3, {self.num_vq}], got {tuple(contact_probs.shape)}"
+                )
+
+        stages = (((step, cascade_order) for step in range(1, max_steps + 1))
+                  if channel_schedule == 'interleaved' else
+                  ((step, (channel,)) for channel in cascade_order
+                   for step in range(1, max_steps + 1)))
+        for step, channels in stages:
+            remaining_ratio = cosine_schedule(
+                torch.tensor(step / max_steps, device=device, dtype=torch.float32)
+            )
+            remaining_counts = torch.floor(remaining_ratio * m_tokens_len.float()).long().clamp(min=0)
+
+            for channel in channels:
+                current = ids[:, :, channel]
+                was_masked = (current == mask_id) & valid_mask
+                if not was_masked.any():
+                    continue
+
+                logits = self.forward_function(
+                    ids, clip_feature, src_token_mask, word_emb=word_emb,
+                    contact_mask=contact_mask, betas=betas, gender=gender,
+                )
+                if CFG > 0:
+                    uncond_logits = self.forward_function(
+                        ids, clip_feature, src_token_mask, word_emb=word_emb,
+                        contact_mask=contact_mask, betas=betas, gender=gender,
+                        force_mask=True,
+                    )
+                    logits = uncond_logits + CFG * (logits - uncond_logits)
+                channel_logits = logits[:, :, channel, :]
+
+                if contact_probs is not None and contact_target is not None:
+                    target = contact_target.unsqueeze(-1)
+                    token_contact = contact_probs[channel].view(1, 1, -1)
+                    compatibility = target * token_contact + (1.0 - target) * (1.0 - token_contact)
+                    channel_logits = channel_logits + contact_guidance_scale * torch.log(compatibility + 1e-6)
+
+                if rand_pos and temperature_end is not None:
+                    # Diagnostic linear annealing keeps the first denoising
+                    # decision at the requested starting temperature and ends
+                    # at ``temperature_end``.  The default remains the exact
+                    # constant-temperature paper/author implementation.
+                    fraction_remaining = (
+                        (max_steps - step) / max(max_steps - 1, 1)
+                    )
+                    sample_temperature = (
+                        float(temperature_end)
+                        + (float(temperature) - float(temperature_end))
+                        * fraction_remaining
+                    )
+                else:
+                    sample_temperature = float(temperature) if rand_pos else 0.0
+                predictions = gumbel_sample(
+                    channel_logits, temperature=sample_temperature, dim=-1
+                )
+                probabilities = channel_logits.softmax(dim=-1)
+                confidence = probabilities.gather(-1, predictions.unsqueeze(-1)).squeeze(-1)
+                if confidence_ranking == 'max_probability':
+                    # Rank positions independently of which candidate was drawn.
+                    confidence = probabilities.amax(dim=-1)
+                # Only currently masked positions compete to remain masked;
+                # tokens fixed in earlier steps stay fixed, as in MaskGIT.
+                uncertainty = (1.0 - confidence).masked_fill(~was_masked, -float("inf"))
+                if confidence_ranking == 'log_odds':
+                    score = selected_log_odds(channel_logits, predictions.unsqueeze(-1)).squeeze(-1)
+                    uncertainty = (-score).masked_fill(~was_masked, -float('inf'))
+                if (confidence_noise_scale > 0
+                        and (confidence_noise_scope == 'all' or channel == 2)
+                        and (confidence_noise_until_step == 0 or step <= confidence_noise_until_step)):
+                    # Change commitment order, not the token proposal distribution.
+                    # Zero scale preserves the original output AND RNG consumption.
+                    scale = confidence_noise_scale * (max_steps - step) / max(max_steps - 1, 1)
+                    if scale > 0:
+                        noise = -torch.empty_like(confidence).exponential_().log()
+                        if confidence_ranking in ('probability', 'max_probability'):
+                            score = confidence.clamp_min(torch.finfo(confidence.dtype).tiny).log()
+                        score = score + scale * noise
+                        uncertainty = (-score).masked_fill(~was_masked, -float('inf'))
+                sorted_indices = uncertainty.argsort(dim=-1, descending=True)
+                keep_masked = torch.zeros_like(was_masked)
+                for batch_idx, count in enumerate(remaining_counts.tolist()):
+                    count = min(count, int(was_masked[batch_idx].sum().item()))
+                    if count:
+                        keep_masked[batch_idx, sorted_indices[batch_idx, :count]] = True
+                keep_masked &= was_masked
+
+                updated = current.clone()
+                newly_fixed = was_masked & ~keep_masked
+                updated[newly_fixed] = predictions[newly_fixed]
+                updated[keep_masked] = mask_id
+                ids[:, :, channel] = updated
+
+        if ((ids == mask_id) & valid_mask.unsqueeze(-1)).any():
+            raise RuntimeError("cascade sampler ended with unresolved mask tokens")
+        return ids
+
+    def sample_intra_cas_repredict(
+        self, clip_feature, word_emb, contact_mask=None, betas=None,
+        gender=None, m_length=None, if_test=False, rand_pos=True, CFG=-1,
+        max_steps=50, vocab_contact_map=None, contact_guidance_scale=1.0,
+        temperature=0.5,
+    ):
+        """Diagnostic cascade that re-predicts every valid token each round.
+
+        This keeps the formal 50-step/temperature/CFG/contact settings fixed
+        and changes only the update support.  It mirrors the native MMM
+        cascade's re-predict-then-remask semantics without inheriting its
+        historical 10-step, temperature-zero or conditioning contracts.  The
+        production ``sample_intra_cas`` remains unchanged until a frozen
+        validation comparison establishes which reading matches the paper.
+        """
+        del if_test
+        batch_size = clip_feature.shape[0]
+        device = clip_feature.device
+        mask_id = self.num_vq + 2
+        pad_id = self.num_vq + 1
+        end_id = self.num_vq
+        cascade_order = (2, 0, 1)
+
+        ids = torch.full(
+            (batch_size, self.block_size - 1, 3), mask_id,
+            dtype=torch.long, device=device,
+        )
+        m_tokens_len = torch.ceil(m_length / 4).long()
+        valid_mask = generate_src_mask(self.block_size - 1, m_tokens_len)
+        if self.paper_architecture:
+            src_token_mask = valid_mask
+            ids[~valid_mask.unsqueeze(-1).expand_as(ids)] = pad_id
+        else:
+            src_token_mask = generate_src_mask(
+                self.block_size - 1, m_tokens_len + 1
+            )
+            ids[~src_token_mask.unsqueeze(-1).expand_as(ids)] = pad_id
+            for batch_idx, token_len in enumerate(m_tokens_len.tolist()):
+                if token_len < self.block_size - 1:
+                    ids[batch_idx, token_len, :] = end_id
+
+        contact_target = (
+            None if contact_mask is None
+            else contact_mask.to(device).float()
+        )
+        contact_probs = None
+        if vocab_contact_map is not None:
+            contact_probs = vocab_contact_map.to(device).float()
+            if contact_probs.shape != (3, self.num_vq):
+                raise ValueError(
+                    f"vocab_contact_map must be [3, {self.num_vq}], "
+                    f"got {tuple(contact_probs.shape)}"
+                )
+
+        for step in range(1, max_steps + 1):
+            remaining_ratio = cosine_schedule(torch.tensor(
+                step / max_steps, device=device, dtype=torch.float32,
+            ))
+            remaining_counts = torch.floor(
+                remaining_ratio * m_tokens_len.float()
+            ).long().clamp(min=0)
+
+            for channel in cascade_order:
+                logits = self.forward_function(
+                    ids, clip_feature, src_token_mask, word_emb=word_emb,
+                    contact_mask=contact_mask, betas=betas, gender=gender,
+                )
+                if CFG > 0:
+                    uncond_logits = self.forward_function(
+                        ids, clip_feature, src_token_mask, word_emb=word_emb,
+                        contact_mask=contact_mask, betas=betas, gender=gender,
+                        force_mask=True,
+                    )
+                    logits = uncond_logits + CFG * (logits - uncond_logits)
+                channel_logits = logits[:, :, channel, :]
+
+                if contact_probs is not None and contact_target is not None:
+                    target = contact_target.unsqueeze(-1)
+                    token_contact = contact_probs[channel].view(1, 1, -1)
+                    compatibility = (
+                        target * token_contact
+                        + (1.0 - target) * (1.0 - token_contact)
+                    )
+                    channel_logits = channel_logits + (
+                        contact_guidance_scale
+                        * torch.log(compatibility + 1e-6)
+                    )
+
+                sample_temperature = float(temperature) if rand_pos else 0.0
+                predictions = gumbel_sample(
+                    channel_logits, temperature=sample_temperature, dim=-1,
+                )
+                confidence = channel_logits.softmax(dim=-1).gather(
+                    -1, predictions.unsqueeze(-1)
+                ).squeeze(-1)
+                uncertainty = (1.0 - confidence).masked_fill(
+                    ~valid_mask, -float("inf")
+                )
+                sorted_indices = uncertainty.argsort(
+                    dim=-1, descending=True
+                )
+                keep_masked = torch.zeros_like(valid_mask)
+                for batch_idx, count in enumerate(remaining_counts.tolist()):
+                    count = min(count, int(valid_mask[batch_idx].sum().item()))
+                    if count:
+                        keep_masked[
+                            batch_idx, sorted_indices[batch_idx, :count]
+                        ] = True
+                keep_masked &= valid_mask
+
+                # The single changed factor: all valid positions receive this
+                # round's prediction before the lowest-confidence subset is
+                # remasked, including positions fixed by an earlier round.
+                ids[:, :, channel] = torch.where(
+                    keep_masked,
+                    torch.full_like(predictions, mask_id),
+                    predictions,
+                )
+                if not self.paper_architecture:
+                    ids[:, :, channel] = torch.where(
+                        src_token_mask, ids[:, :, channel],
+                        torch.full_like(predictions, pad_id),
+                    )
+                    for batch_idx, token_len in enumerate(m_tokens_len.tolist()):
+                        if token_len < self.block_size - 1:
+                            ids[batch_idx, token_len, channel] = end_id
+
+        if ((ids == mask_id) & valid_mask.unsqueeze(-1)).any():
+            raise RuntimeError(
+                "re-predict cascade ended with unresolved mask tokens"
+            )
+        return ids

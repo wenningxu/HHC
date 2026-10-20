@@ -1,0 +1,310 @@
+{
+  "status": "proposed_only_not_applied",
+  "review_status": "approved_for_diagnostic_only",
+  "source": "production first100 manifest captions plus strict-v3 pickle",
+  "mapping_validation": "New_MMM eval.extract_interx_contacts_codex.map_contact_rows; exit_code 0",
+  "entries": [
+    {
+      "source_name": "G045T002A010R003",
+      "caption": "Two people stand facing each other, and one raises his right hand to strike the other person's face with his palm. The other person retaliates by also raising their right hand and delivering a powerful blow to the other person's face.",
+      "pickle_sha256": "0c9f876b7142bff3360903b3e556d68b623bc4d49f672fe4e7907aab40f3aa0f",
+      "old_contacts": [
+        {
+          "p1_part": "right hand (palm)",
+          "p1_ids": [
+            23,
+            26
+          ],
+          "p2_part": "head",
+          "p2_ids": [
+            39,
+            51,
+            52,
+            66
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        },
+        {
+          "p1_part": "right hand (palm)",
+          "p1_ids": [
+            23,
+            26
+          ],
+          "p2_part": "head",
+          "p2_ids": [
+            39,
+            51,
+            52,
+            66
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        }
+      ],
+      "new_contacts": [
+        {
+          "p1_part": "right hand (palm)",
+          "p1_ids": [
+            23,
+            26
+          ],
+          "p2_part": "head",
+          "p2_ids": [
+            39,
+            51,
+            52,
+            66
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        },
+        {
+          "p1_part": "head",
+          "p1_ids": [
+            39,
+            51,
+            52,
+            66
+          ],
+          "p2_part": "right hand (palm)",
+          "p2_ids": [
+            23,
+            26
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        }
+      ],
+      "reason": "Reciprocal retaliation; second relation must reverse direction. Same 5:5 weight retained.",
+      "uncertainty": "Face represented by head candidate; exact frame boundaries unspecified.",
+      "review_status": "approved_for_diagnostic_only"
+    },
+    {
+      "source_name": "G001T003A019R024",
+      "caption": "The first person grabs the second person's left arm with both hands, while the second person grabs the first person's right arm with both hands. They walk sideways together, supporting each other with their arms.",
+      "pickle_sha256": "df3fa68177afc5bfa4e5abb6f45bda4a9126d82c08aae79d916d572e9a94f974",
+      "old_contacts": [
+        {
+          "p1_part": "left arm",
+          "p1_ids": [
+            5,
+            11,
+            17,
+            34,
+            49,
+            57,
+            69
+          ],
+          "p2_part": "left hand (palm), right hand (palm)",
+          "p2_ids": [
+            17,
+            23,
+            26,
+            33
+          ],
+          "contact_type": "wrap",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        },
+        {
+          "p1_part": "right arm",
+          "p1_ids": [
+            6,
+            8,
+            24,
+            32,
+            37,
+            44
+          ],
+          "p2_part": "left hand (palm), right hand (palm)",
+          "p2_ids": [
+            17,
+            23,
+            26,
+            33
+          ],
+          "contact_type": "wrap",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        }
+      ],
+      "new_contacts": [
+        {
+          "p1_part": "left arm",
+          "p1_ids": [
+            5,
+            11,
+            17,
+            34,
+            49,
+            57,
+            69
+          ],
+          "p2_part": "left hand (palm), right hand (palm)",
+          "p2_ids": [
+            17,
+            23,
+            26,
+            33
+          ],
+          "contact_type": "wrap",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        },
+        {
+          "p1_part": "left hand (palm), right hand (palm)",
+          "p1_ids": [
+            17,
+            23,
+            26,
+            33
+          ],
+          "p2_part": "right arm",
+          "p2_ids": [
+            6,
+            8,
+            24,
+            32,
+            37,
+            44
+          ],
+          "contact_type": "wrap",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        }
+      ],
+      "reason": "First relation is first person's hands→second left arm; reciprocal second relation is second hands→first right arm.",
+      "uncertainty": "Both hands are grouped; no per-hand pairing is specified.",
+      "review_status": "approved_for_diagnostic_only"
+    },
+    {
+      "source_name": "G053T002A011R007",
+      "caption": "Two people are standing. One person walks behind the other person and gently pats his/her back with his/her right hand. In response, the other person reaches out with his/her left hand and slaps the person on the back.",
+      "pickle_sha256": "54c18eb8a2436f3969726ecc91284d1e49c49420d8c389dbdb56d3475af04265",
+      "old_contacts": [
+        {
+          "p1_part": "right hand (palm)",
+          "p1_ids": [
+            23,
+            26
+          ],
+          "p2_part": "back",
+          "p2_ids": [
+            2,
+            10,
+            13,
+            14,
+            29,
+            35,
+            38,
+            41,
+            43,
+            48,
+            63,
+            70
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        },
+        {
+          "p1_part": "left hand (palm)",
+          "p1_ids": [
+            17,
+            33
+          ],
+          "p2_part": "back",
+          "p2_ids": [
+            2,
+            10,
+            13,
+            14,
+            29,
+            35,
+            38,
+            41,
+            43,
+            48,
+            63,
+            70
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        }
+      ],
+      "new_contacts": [
+        {
+          "p1_part": "right hand (palm)",
+          "p1_ids": [
+            23,
+            26
+          ],
+          "p2_part": "back",
+          "p2_ids": [
+            2,
+            10,
+            13,
+            14,
+            29,
+            35,
+            38,
+            41,
+            43,
+            48,
+            63,
+            70
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        },
+        {
+          "p1_part": "back",
+          "p1_ids": [
+            2,
+            10,
+            13,
+            14,
+            29,
+            35,
+            38,
+            41,
+            43,
+            48,
+            63,
+            70
+          ],
+          "p2_part": "left hand (palm)",
+          "p2_ids": [
+            17,
+            33
+          ],
+          "contact_type": "flat",
+          "align_type": "strict",
+          "w_p1": 0.499999950000005,
+          "w_p2": 0.499999950000005
+        }
+      ],
+      "reason": "Second relation is the reciprocal response and must be back→second left hand.",
+      "uncertainty": "Caption does not identify which physical person is P1 after global naming; relation set is reciprocal and role-consistent.",
+      "review_status": "approved_for_diagnostic_only"
+    }
+  ]
+}

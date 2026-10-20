@@ -1,0 +1,12 @@
+{
+  "status":"proposed_only_not_applied",
+  "review_status":"approved_for_diagnostic_only",
+  "entries":[{"review_status":"approved_for_diagnostic_only","source_name":"G023T002A011R011",
+  "caption":"The person standing extends his/her hand to pat the back of the person sitting, but the person being patted turns around.",
+  "pickle_sha256":"ec0a6ccf9debf1c16781445c4b9106080d00478b0559469336db7c7b7b9711c8",
+  "old_contacts":[],
+  "new_contacts":[{"p1_part":"left hand (palm), right hand (palm)","p1_ids":[17,23,26,33],"p2_part":"back","p2_ids":[2,10,13,14,29,35,38,41,43,48,63,70],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101}],
+  "reason":"Caption explicitly describes the standing person patting the sitting person's back. Both palms preserve unspecified laterality; 9:1 marks the standing patter as active.",
+  "root_review_evidence":"Root inspected skeleton az-60: P2 standing pats seated P1. Original-shape full-crop mesh check session90669 exit0: P2 right palm to P1 back minimum 1.171162 mm at source65, below50mm source55..83 (29 frames); reverse-direction palms exceed521mm. Existing timing has20positiveframes. No cache/timing changed; actual output contact and physical effects pending.",
+  "uncertainty":"Caption does not specify left versus right hand or exact frame interval. Both palms are alternatives, not simultaneous bilateral contact; role assignment must be verified. No separate turn contact is inferred."
+}]}

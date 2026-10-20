@@ -1,0 +1,21 @@
+{
+  "schema": "hhc_interx_grounded_chain_fixed_root_pilot25_contract_v1",
+  "status": "preregistered_before_five_pair_result",
+  "activation": "the frozen five-pair gate must pass",
+  "selection_seed": 20260828,
+  "sample_count": 25,
+  "positive_timing_only": true,
+  "optimizer": {
+    "iterations": 100,
+    "learning_rate": 0.02,
+    "fine_stage_start": 50,
+    "ground_alignment_policy": "mmm_per_person_joint_min_restore_raw",
+    "optimization_variable_policy": "grounded_chain_fixed_root",
+    "foot_contact_mask_policy": "initial_or_current_grounded_horizontal_mean_speed",
+    "contact_loss_reduction_policy": "active_contact_mean",
+    "volumetric_smpl_frame_batch_size": 8,
+    "query_chunk": 10475
+  },
+  "authorization_gate": "configs/interx_shape_augmentation/pilot_physical_gate_v1.json",
+  "authorization_scope": "only a passing unchanged 25-pair gate may authorize full augmentation"
+}

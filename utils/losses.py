@@ -1,8 +1,6 @@
 import torch
 import numpy as np
 import torch.nn as nn
-from utils.rotation2xyz import Rotation2xyz_x
-from utils.paramUtil import SMPLX_MODEL_MALE_PATH, SMPLX_MODEL_FEMALE_PATH
 from utils.motion_process import (
     recover_from_ric,
     MotionNormalizerTorchInterX,
@@ -21,6 +19,10 @@ class ReConsLoss(nn.Module):
         elif recons_loss == 'l1_smooth' : 
             self.Loss = torch.nn.SmoothL1Loss()
 
+        # ReConsLossInter and native SMPL RawLoss use their supplied FK layer.
+        # Load the full SMPL-X assets only for this legacy loss class.
+        from utils.rotation2xyz import Rotation2xyz_x
+        from utils.paramUtil import SMPLX_MODEL_MALE_PATH, SMPLX_MODEL_FEMALE_PATH
         self.rot2xyz_male = Rotation2xyz_x('cpu', model_path=SMPLX_MODEL_MALE_PATH)
         self.rot2xyz_female = Rotation2xyz_x('cpu', model_path=SMPLX_MODEL_FEMALE_PATH)
         # 4 global motion associated to root
@@ -187,7 +189,9 @@ class ReConsLossInter(nn.Module):
         gt_m = rotation_6d_to_matrix(self.motion_gt_de.reshape(self.motion_pred_de.shape[0], -1, 56, 2, 6))[:, :,
                :-1].reshape(-1, 3, 3)
 
-        m = torch.bmm(gt_m, pred_m.transpose(1, 2))  # batch*3*3
+        # bf16 rounds the acos clamp's 1-eps to 1, producing infinite gradients.
+        with torch.autocast(device_type=pred_m.device.type, enabled=False):
+            m = torch.bmm(gt_m.float(), pred_m.float().transpose(1, 2))
 
         cos = (m[:, 0, 0] + m[:, 1, 1] + m[:, 2, 2] - 1) / 2
 
@@ -271,11 +275,11 @@ class ReConsLossInter(nn.Module):
         gt_oriental = rotation_6d_to_matrix(self.motion_gt_de.reshape(self.motion_pred_de.shape[0], -1, 56, 2, 6))[:, :,
                       0].reshape(-1, 2, 3, 3)
 
-        pred_rel_oriental = torch.bmm(pred_oriental[:, 0].transpose(1, 2), pred_oriental[:, 1])
-
-        gt_rel_oriental = torch.bmm(gt_oriental[:, 0].transpose(1, 2), gt_oriental[:, 1])
-
-        m = torch.bmm(gt_rel_oriental, pred_rel_oriental.transpose(1, 2))  # batch*3*3
+        with torch.autocast(device_type=pred_oriental.device.type, enabled=False):
+            pred_oriental, gt_oriental = pred_oriental.float(), gt_oriental.float()
+            pred_rel_oriental = torch.bmm(pred_oriental[:, 0].transpose(1, 2), pred_oriental[:, 1])
+            gt_rel_oriental = torch.bmm(gt_oriental[:, 0].transpose(1, 2), gt_oriental[:, 1])
+            m = torch.bmm(gt_rel_oriental, pred_rel_oriental.transpose(1, 2))
 
         cos = (m[:, 0, 0] + m[:, 1, 1] + m[:, 2, 2] - 1) / 2
 
@@ -385,7 +389,8 @@ class ReConsLossSingle(nn.Module):
                  :-1].reshape(-1, 3, 3)
         gt_m = rotation_6d_to_matrix(self.motion_gt_de.reshape(self.motion_pred_de.shape[0], -1, 56, 6))[:, :,
                :-1].reshape(-1, 3, 3)
-        m = torch.bmm(gt_m, pred_m.transpose(1, 2))  # batch*3*3
+        with torch.autocast(device_type=pred_m.device.type, enabled=False):
+            m = torch.bmm(gt_m.float(), pred_m.float().transpose(1, 2))
         cos = (m[:, 0, 0] + m[:, 1, 1] + m[:, 2, 2] - 1) / 2
         theta = torch.acos(torch.clamp(cos, -1 + eps, 1 - eps))
         return torch.mean(theta)

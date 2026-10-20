@@ -530,6 +530,39 @@ class Block_crossatt(nn.Module):
         x = x + self.mlp(self.ln2(x))
         return x
 
+
+class AdaCrossSelfBlock(nn.Module):
+    """Paper HHC conditional block: cross-attention then self-attention.
+
+    Shape/gender and the global CLIP feature modulate every sub-layer through
+    AdaLN, while fine-grained CLIP word features provide cross-attention keys
+    and values.
+    """
+
+    def __init__(self, embed_dim=512, block_size=16, n_head=8, drop_out_rate=0.1, fc_rate=4):
+        super().__init__()
+        self.cross_norm = nn.LayerNorm(embed_dim)
+        self.word_norm = nn.LayerNorm(embed_dim)
+        self.self_norm = nn.LayerNorm(embed_dim)
+        self.mlp_norm = nn.LayerNorm(embed_dim)
+        self.cross_attn = CrossAttention(embed_dim, block_size, n_head, drop_out_rate)
+        self.self_attn = Attention(embed_dim, block_size, n_head, drop_out_rate)
+        self.cross_adaln = AdaLN(embed_dim, embed_dim)
+        self.self_adaln = AdaLN(embed_dim, embed_dim)
+        self.mlp = nn.Sequential(
+            nn.Linear(embed_dim, fc_rate * embed_dim),
+            nn.GELU(),
+            nn.Linear(fc_rate * embed_dim, embed_dim),
+            nn.Dropout(drop_out_rate),
+        )
+
+    def forward(self, x, word_emb, cond_emb, src_mask=None):
+        cross_query = self.cross_adaln(self.cross_norm(x), cond_emb)
+        x = x + self.cross_attn(cross_query, self.word_norm(word_emb))
+        x = x + self.self_attn(self.self_adaln(self.self_norm(x), cond_emb), src_mask)
+        x = x + self.mlp(self.mlp_norm(x))
+        return x
+
 class CrossCondTransBase(nn.Module):
 
     def __init__(self, 
@@ -661,4 +694,3 @@ class AdaLN(nn.Module):
         return x * (1 + gamma) + beta
 
         
-

@@ -1,0 +1,66 @@
+{
+  "schema": "hhc_humanml3d_amass_smplx_shape_donor_contract_v1",
+  "status": "waiting_for_licensed_source_assets",
+  "purpose": "replace the narrow 118-person Inter-X donor pool with diverse HumanML3D-train AMASS body shapes",
+  "source": {
+    "humanml3d_root": "/mnt/8T-HDD/HumanML3D",
+    "index": "/mnt/8T-HDD/HumanML3D/index.csv",
+    "split": "/mnt/8T-HDD/HumanML3D/HumanML3D/train.txt",
+    "required_amass_root": "/mnt/8T-HDD/HumanML3D/amass_data",
+    "required_amass_representation": "SMPL+H G",
+    "current_local_state": "processed HumanML3D joints/vectors are present; original AMASS archives are absent"
+  },
+  "selection": {
+    "split_policy": "HumanML3D train only; strip M prefix and deduplicate mirrored clips",
+    "identity_policy": "deduplicate exact gender plus subject-level AMASS betas before sampling",
+    "forbidden_splits": ["HumanML3D val", "HumanML3D test"],
+    "sampling": "two different converted donor identities per Inter-X interaction, fixed seed; source Inter-X identities are not part of this external pool"
+  },
+  "conversion": {
+    "required": true,
+    "reason": "SMPL+H and SMPL-X shape spaces are not compatible",
+    "method": "official vchoutas/smplx transfer_model smplh2smplx on neutral-pose donor meshes, preserving source gender",
+    "required_transfer_asset": "smplh2smplx_deftrafo_setup.pkl",
+    "forbidden_shortcut": "never copy AMASS SMPL+H beta coefficients directly into SMPL-X",
+    "output": "frozen deduplicated SMPL-X beta-plus-gender donor manifest with source hashes and transfer residuals"
+  },
+  "inventory": {
+    "builder": "tools/build_humanml3d_amass_shape_inventory.py",
+    "input_beta_dimension": 16,
+    "deduplication": "exact gender plus canonical float64 first-16 beta bytes",
+    "fail_closed": "missing, malformed, non-finite, neutral, or unknown-gender AMASS train sources abort the build"
+  },
+  "transfer_preparation": {
+    "tool": "tools/prepare_humanml3d_amass_shape_transfer.py",
+    "source_mesh": "neutral-pose SMPL+H G with all 16 AMASS betas",
+    "target": "gender-matched SMPL-X with 10 betas",
+    "configs": "separate official transfer_model runs for female and male donors",
+    "batch_size": "forced to 1 because the released transfer_model writes an unsliced batch var_dict into every per-path pkl; larger batches can silently mismatch identity and fitted beta",
+    "provenance": "content hashes for inventory, licensed models, correspondence, every generated mesh, frozen configs, official repository revision, trust-region optimizer revision, and compatibility patch",
+    "runtime": "official smplx revision 1265df7ba545e8b00f72e7c557c766e15c71632f plus patches/smplx_transfer_python312_io_compat.patch; official torch-trust-ncg revision 7510ae709bc0722955343e3bd06144406c72c7f0",
+    "compatibility_patch_scope": "Python 3.12 dataclass default_factory and mesh output I/O only; deformation correspondence, losses, trust-region optimizer and fitting logic unchanged"
+  },
+  "transfer_collection": {
+    "tool": "tools/collect_humanml3d_amass_smplx_donors.py",
+    "gate": "reapply the official deformation matrix to each frozen SMPL+H source mesh and require fitted SMPL-X vertex RMSE <= 0.01 m",
+    "output": "native 10D SMPL-X beta, source gender, identity hash, residual and full artifact provenance",
+    "coverage_report": "donor count, gender counts, covariance spectrum/effective rank, and gender-matched bidirectional nearest-neighbour beta distance against the Inter-X train-only 118-shape pool"
+  },
+  "quality_gate": {
+    "finite_betas": true,
+    "maximum_transfer_vertex_rmse_m": 0.01,
+    "reject_outlier_policy": "reject non-finite, implausible, or above-threshold transferred shapes",
+    "comparison": "report donor count, beta covariance/effective rank, sex counts, and same-gender nearest-neighbour distance against the 118-shape Inter-X pool"
+  },
+  "execution": {
+    "pipeline_runner": "tools/run_humanml3d_amass_shape_donor_pipeline.py --resume",
+    "pipeline_order": "asset audit -> HumanML3D-train inventory -> neutral SMPL+H render -> official gender-specific transfer -> <=1cm RMSE collection -> seeded Inter-X assignment -> plan audit",
+    "asset_failure_policy": "fail before rendering or GPU optimization; processed 263D HumanML3D motion is never accepted as an AMASS shape source",
+    "old_interx_118_shape_optimizer_shard": "paused_and_retained_only_as_recoverable_fallback; not eligible for the final augmentation experiment",
+        "final_augmented_samples_per_training_arm": 6238,
+        "positive_contact_timing_optimization_samples": 5868,
+        "explicit_zero_timing_random_fallback_samples": 370,
+    "contact_and_optimizer_contract": "unchanged; only the donor shape pool changes",
+    "pilot_before_full_run": "rerun the same frozen 25-sample physical and speed gate with converted AMASS donors"
+  }
+}

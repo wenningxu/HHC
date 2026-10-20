@@ -12,8 +12,42 @@ import shutil
 import datetime
 import os
 import math
+import random
+from contextlib import contextmanager
 from typing import Dict, List
 from torch import Tensor
+
+
+@contextmanager
+def evaluating(module):
+    """Temporarily use eval mode, then restore the module's prior mode.
+
+    ``torch.no_grad()`` alone does not stop training-mode EMA quantizers from
+    updating their codebooks, so observational exports need both safeguards.
+    """
+    was_training = module.training
+    module.eval()
+    try:
+        yield module
+    finally:
+        module.train(was_training)
+
+
+@contextmanager
+def preserving_rng_state():
+    """Make stochastic validation observational with respect to training RNGs."""
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    torch_state = torch.get_rng_state()
+    cuda_states = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    try:
+        yield
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.set_rng_state(torch_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
 
 kit_bone = [[0, 11], [11, 12], [12, 13], [13, 14], [14, 15], [0, 16], [16, 17], [17, 18], [18, 19], [19, 20], [0, 1], [1, 2], [2, 3], [3, 4], [3, 5], [5, 6], [6, 7], [3, 8], [8, 9], [9, 10]]
 t2m_bone = [[0,2], [2,5],[5,8],[8,11],
@@ -268,7 +302,10 @@ def init_save_folder(args, copysource=True):
         date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         args.out_dir = f"./{args.out_dir}/{date}_{args.exp_name}/"
         save_source = f'{args.out_dir}source/'
-        os.makedirs(save_source, mode=os.umask(0), exist_ok=False)
+        # Do not pass the return value of os.umask() as a permission mode: it
+        # created mode-0002 directories and permanently changed the process
+        # umask. Source snapshots should be readable and reproducible.
+        os.makedirs(save_source, mode=0o755, exist_ok=False)
     else:
         args.out_dir = os.path.join(args.out_dir, f'{args.exp_name}')
 

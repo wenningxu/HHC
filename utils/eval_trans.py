@@ -10,8 +10,16 @@ from utils.motion_process import MotionNormalizerTorchInterX, recover_interx
 from utils.runtime import get_model
 from tqdm import tqdm
 
+
+def downsample_contact_mask(contact_mask, factor=4):
+    """Pool frame contacts to VQ tokens, padding the 150-frame protocol."""
+    pad = (-contact_mask.shape[1]) % factor
+    if pad:
+        contact_mask = torch.nn.functional.pad(contact_mask, (0, pad), value=0)
+    return (contact_mask.view(contact_mask.shape[0], -1, factor).sum(dim=-1) > 0).long()
+
 @torch.no_grad()        
-def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_iter, best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, clip_model, eval_wrapper, dataname='t2m', draw = False, save = False, savegif=False, num_repeat=1, rand_pos=False, CFG=-1, savenpy=False, contact=False, shape_change=None, save_embeddings=False) :
+def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_iter, best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, clip_model, eval_wrapper, dataname='t2m', draw=False, save=False, savegif=False, num_repeat=1, rand_pos=True, CFG=-1, savenpy=False, contact=False, shape_change=None, save_embeddings=False, sampler='sample_intra_cas', temperature=0.5, sampling_steps=50, contact_guidance_scale=1.0, contact_map_path='checkpoints/vq_paper/code_contact_probs.npy', return_current_metrics=False):
     if num_repeat < 0:
         is_avg_all = True
         num_repeat = -num_repeat
@@ -21,8 +29,9 @@ def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_i
     device = next(net.parameters()).device
     max_length = trans.block_size - 1
 
-    vocab_contact_map = np.load('checkpoints/vq/code_contact_probs.npy')
-    vocab_contact_map = torch.from_numpy(vocab_contact_map).float().to(device)
+    vocab_contact_map = None
+    if contact:
+        vocab_contact_map = torch.from_numpy(np.load(contact_map_path)).float().to(device)
     motions_dir = os.path.join(out_dir, 'motions')
     embeddings_dir = os.path.join(out_dir, 'embeddings')
     manifest_path = os.path.join(out_dir, 'manifest.jsonl')
@@ -71,8 +80,7 @@ def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_i
         m_tokens_len = torch.ceil((m_length)/4)
         # contact_mask = torch.cummax(contact_mask, dim=1)[0]
         if contact:
-            contact_mask = contact_mask.view(bs, -1, 4)
-            contact_mask = (torch.sum(contact_mask, dim=-1) > 0).long()
+            contact_mask = downsample_contact_mask(contact_mask, factor=4)
             if contact_mask.shape[1] < max_length:
                 contact_mask = torch.cat([
                     contact_mask,
@@ -91,11 +99,19 @@ def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_i
             # pred_len = torch.ones(bs).long()
             #print(next(trans.parameters()).device)
             #print(feat_clip_text.device, word_emb.device, pred_len.device)
+            sample_kwargs = dict(
+                m_length=pred_len, rand_pos=rand_pos, betas=betas,
+                gender=gender, CFG=CFG, max_steps=sampling_steps,
+            )
             if contact:
-                index_motion = trans(feat_clip_text, word_emb, type="sample", m_length=pred_len,
-                                     rand_pos=rand_pos, betas=betas, gender=gender, CFG=CFG, contact_mask=contact_mask, vocab_contact_map=vocab_contact_map)
-            else:
-                index_motion = trans(feat_clip_text, word_emb, type="sample", m_length=pred_len, rand_pos=rand_pos, betas=betas, gender=gender, CFG=CFG)
+                sample_kwargs['contact_mask'] = contact_mask
+            if sampler == 'sample_intra_cas':
+                sample_kwargs.update(
+                    temperature=temperature,
+                    vocab_contact_map=vocab_contact_map,
+                    contact_guidance_scale=contact_guidance_scale,
+                )
+            index_motion = trans(feat_clip_text, word_emb, type=sampler, **sample_kwargs)
             for k in range(bs):
                 pred_pose = net(index_motion[k:k+1, :int(pred_tok_len[k].item())], betas[k:k+1], gender[k:k+1], type='decode')
                 pred_pose = normalizer.backward(pred_pose)
@@ -244,7 +260,22 @@ def evaluation_transformer(out_dir, val_loader, net, trans, logger, writer, nb_i
         torch.save({'trans' : get_model(trans).state_dict()}, os.path.join(out_dir, 'net_last.pth'))
 
     trans.train()
-    return fid, pose, m_length, clip_text, best_fid, best_iter, best_div, best_top1, best_top2, best_top3, best_matching, multimodality, writer, logger
+    result = (
+        fid, pose, m_length, clip_text, best_fid, best_iter, best_div,
+        best_top1, best_top2, best_top3, best_matching, multimodality,
+        writer, logger,
+    )
+    if return_current_metrics:
+        return result + ({
+            'FID': float(fid),
+            'Diversity': float(diversity),
+            'R_precision_top1': float(R_precision[0]),
+            'R_precision_top2': float(R_precision[1]),
+            'R_precision_top3': float(R_precision[2]),
+            'Matching': float(matching_score_pred),
+            'Multimodality': float(multimodality),
+        },)
+    return result
 
 # (X - X_train)*(X - X_train) = -2X*X_train + X*X + X_train*X_train
 def euclidean_distance_matrix(matrix1, matrix2):

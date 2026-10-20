@@ -1,0 +1,473 @@
+{
+  "methods": [
+    "hhc_historical_plus_paper_mask_ratio_no_contact_common50",
+    "hhc_historical_plus_paper_mask_ratio_contact_common50",
+    "intermask_official_exact_common50",
+    "interact2ar_official_fair_no_gt_first_frame",
+    "coshmdm_interx_retrained_2daycap_seed123",
+    "timotion_transformer_lpa_interx_retrained_fair"
+  ],
+  "records": [
+    {
+      "beta_norms": [
+        1.3712542982006566,
+        1.8328618962179688
+      ],
+      "betas": [
+        [
+          -0.948367178440094,
+          -0.8696955442428589,
+          0.42488208413124084,
+          0.1568656861782074,
+          0.07431016862392426,
+          0.004711348097771406,
+          0.10594996064901352,
+          0.04978489503264427,
+          -0.00838607270270586,
+          -0.010845390148460865
+        ],
+        [
+          0.18463273346424103,
+          -1.3394101858139038,
+          -1.1907790899276733,
+          0.07387713342905045,
+          0.03298468887805939,
+          0.3096987009048462,
+          0.09320210665464401,
+          0.034243859350681305,
+          0.026758918538689613,
+          -0.01686941832304001
+        ]
+      ],
+      "caption": "Two people stand facing each other. The first person opens his/her arms, and the second person runs towards the first person, embracing his/her neck, while holding his/her waist.",
+      "category": "action_hug",
+      "gender": [
+        "female",
+        "male"
+      ],
+      "length": 150,
+      "name": "G012T000A000R002",
+      "pair_beta_distance": 2.0537695454152356,
+      "request_index": 559,
+      "selection": {
+        "candidate_count": 76,
+        "keywords": [
+          "hug",
+          "embrac",
+          "cuddl"
+        ],
+        "rule": "minimum_sha256_over_keyword_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        1.4358509208251733,
+        1.0957725056144685
+      ],
+      "betas": [
+        [
+          1.1108815670013428,
+          -0.6296901106834412,
+          -0.6267938017845154,
+          0.09920181334018707,
+          0.031271401792764664,
+          0.13483935594558716,
+          0.09434860944747925,
+          0.01612183079123497,
+          0.0026789947878569365,
+          -0.007784772664308548
+        ],
+        [
+          0.47771283984184265,
+          -0.6778889298439026,
+          -0.6873835325241089,
+          0.08526812493801117,
+          0.021375622600317,
+          0.16049395501613617,
+          0.07877587527036667,
+          0.023017629981040955,
+          0.015406124293804169,
+          0.004430154804140329
+        ]
+      ],
+      "caption": "The initial individual takes a seat and lifts both arms, endeavoring to exchange a high-five with the second individual. The second individual moves closer to the first person and raises his/her hands to return the high-five.",
+      "category": "action_high_five",
+      "gender": [
+        "male",
+        "male"
+      ],
+      "length": 100,
+      "name": "G008T003A016R004",
+      "pair_beta_distance": 0.6390996460950857,
+      "request_index": 380,
+      "selection": {
+        "candidate_count": 34,
+        "keywords": [
+          "high five",
+          "high-five",
+          "highfive"
+        ],
+        "rule": "minimum_sha256_over_keyword_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        1.484089600154497,
+        0.3465044248877129
+      ],
+      "betas": [
+        [
+          0.3961322009563446,
+          -1.0462955236434937,
+          -0.9395511746406555,
+          0.08064809441566467,
+          0.03761423006653786,
+          0.2256467342376709,
+          0.08988882601261139,
+          0.028478851541876793,
+          0.014424600638449192,
+          -0.013265701942145824
+        ],
+        [
+          0.17623430490493774,
+          -0.18910780549049377,
+          -0.2242271602153778,
+          0.019732680171728134,
+          0.008930258452892303,
+          0.04643205925822258,
+          0.01707790233194828,
+          0.00635030772536993,
+          0.00028422640752978623,
+          -0.003174667712301016
+        ]
+      ],
+      "caption": "Two people walk up, hold their right hands together, and shake their hands up and down to shake hands.",
+      "category": "action_handshake",
+      "gender": [
+        "male",
+        "male"
+      ],
+      "length": 150,
+      "name": "G021T000A001R005",
+      "pair_beta_distance": 1.1565286655831744,
+      "request_index": 486,
+      "selection": {
+        "candidate_count": 36,
+        "keywords": [
+          "handshake",
+          "shake hands",
+          "shaking hands"
+        ],
+        "rule": "minimum_sha256_over_keyword_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        0.5476786830661272,
+        1.4539453828576046
+      ],
+      "betas": [
+        [
+          -0.5236631035804749,
+          -0.03602674603462219,
+          0.13348515331745148,
+          0.07172685861587524,
+          -0.002686175284907222,
+          -0.01048971340060234,
+          0.03252905234694481,
+          0.013124135322868824,
+          0.0070222108624875546,
+          0.008425897918641567
+        ],
+        [
+          -0.9637354612350464,
+          -0.9632498621940613,
+          0.45059001445770264,
+          0.17409436404705048,
+          0.07704886794090271,
+          0.009195655584335327,
+          0.12057466059923172,
+          0.05704925209283829,
+          -0.007234073244035244,
+          -0.010693243704736233
+        ]
+      ],
+      "caption": "Two people stand facing each other. One person steps forward and lifts his/her right foot higher, kicking towards the other person, causing him/her to step back.",
+      "category": "action_kick",
+      "gender": [
+        "female",
+        "female"
+      ],
+      "length": 150,
+      "name": "G017T001A005R004",
+      "pair_beta_distance": 1.0869390071839633,
+      "request_index": 582,
+      "selection": {
+        "candidate_count": 45,
+        "keywords": [
+          "kick"
+        ],
+        "rule": "minimum_sha256_over_keyword_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        1.484089600154497,
+        0.3465044248877129
+      ],
+      "betas": [
+        [
+          0.3961322009563446,
+          -1.0462955236434937,
+          -0.9395511746406555,
+          0.08064809441566467,
+          0.03761423006653786,
+          0.2256467342376709,
+          0.08988882601261139,
+          0.028478851541876793,
+          0.014424600638449192,
+          -0.013265701942145824
+        ],
+        [
+          0.17623430490493774,
+          -0.18910780549049377,
+          -0.2242271602153778,
+          0.019732680171728134,
+          0.008930258452892303,
+          0.04643205925822258,
+          0.01707790233194828,
+          0.00635030772536993,
+          0.00028422640752978623,
+          -0.003174667712301016
+        ]
+      ],
+      "caption": "One person walks up behind the other person, grabs his/her shoulder, and pushes it forward, while the other person takes a few steps forward.",
+      "category": "gender_male_male",
+      "gender": [
+        "male",
+        "male"
+      ],
+      "length": 150,
+      "name": "G021T000A003R019",
+      "pair_beta_distance": 1.1565286655831744,
+      "request_index": 1061,
+      "selection": {
+        "candidate_count": 522,
+        "gender_target": [
+          "male",
+          "male"
+        ],
+        "rule": "minimum_sha256_over_gender_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        1.2619418789863779,
+        0.5457032515766063
+      ],
+      "betas": [
+        [
+          -1.1524721384048462,
+          -0.41467994451522827,
+          0.2304486334323883,
+          0.1522308886051178,
+          0.016261747106909752,
+          -0.036269448697566986,
+          0.11139184981584549,
+          0.045176077634096146,
+          0.0058717066422104836,
+          -0.0012598405592143536
+        ],
+        [
+          0.01596095971763134,
+          -0.4365391135215759,
+          0.30283844470977783,
+          0.09686852991580963,
+          0.028273724019527435,
+          0.037163253873586655,
+          0.03578963503241539,
+          0.040405236184597015,
+          0.017412392422556877,
+          0.02188766375184059
+        ]
+      ],
+      "caption": "Two people sit facing each other, chat, wave their hands while talking, and one person claps at some point.",
+      "category": "gender_female_female",
+      "gender": [
+        "female",
+        "female"
+      ],
+      "length": 150,
+      "name": "G019T005A029R021",
+      "pair_beta_distance": 1.177269341817249,
+      "request_index": 705,
+      "selection": {
+        "candidate_count": 573,
+        "gender_target": [
+          "female",
+          "female"
+        ],
+        "rule": "minimum_sha256_over_gender_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        1.3712542982006566,
+        1.8328618962179688
+      ],
+      "betas": [
+        [
+          -0.948367178440094,
+          -0.8696955442428589,
+          0.42488208413124084,
+          0.1568656861782074,
+          0.07431016862392426,
+          0.004711348097771406,
+          0.10594996064901352,
+          0.04978489503264427,
+          -0.00838607270270586,
+          -0.010845390148460865
+        ],
+        [
+          0.18463273346424103,
+          -1.3394101858139038,
+          -1.1907790899276733,
+          0.07387713342905045,
+          0.03298468887805939,
+          0.3096987009048462,
+          0.09320210665464401,
+          0.034243859350681305,
+          0.026758918538689613,
+          -0.01686941832304001
+        ]
+      ],
+      "caption": "Both people stand face to face, take a step forward, and simultaneously raise their right hands to give each other a high-five.",
+      "category": "gender_mixed",
+      "gender": [
+        "female",
+        "male"
+      ],
+      "length": 80,
+      "name": "G012T003A016R008",
+      "pair_beta_distance": 2.0537695454152356,
+      "request_index": 1562,
+      "selection": {
+        "candidate_count": 601,
+        "gender_target": "mixed",
+        "rule": "minimum_sha256_over_gender_matches"
+      }
+    },
+    {
+      "beta_norms": [
+        2.4559292875343646,
+        1.9956562338491175
+      ],
+      "betas": [
+        [
+          1.7568371295928955,
+          -1.3239655494689941,
+          -1.0482267141342163,
+          0.09735339134931564,
+          0.10833267122507095,
+          0.20104888081550598,
+          0.15991371870040894,
+          0.027635572478175163,
+          -0.026708105579018593,
+          -0.06902316212654114
+        ],
+        [
+          0.3212909698486328,
+          1.6954820156097412,
+          0.9347135424613953,
+          0.21952447295188904,
+          -0.13455361127853394,
+          -0.19938859343528748,
+          -0.017135629430413246,
+          -0.0352383628487587,
+          0.059224143624305725,
+          0.14132548868656158
+        ]
+      ],
+      "caption": "Two people face each other. One person walks up to the other person.",
+      "category": "shape_max_pair_beta_distance",
+      "gender": [
+        "male",
+        "male"
+      ],
+      "length": 48,
+      "name": "G006T003A013R011",
+      "pair_beta_distance": 3.928244981694201,
+      "request_index": 31,
+      "selection": {
+        "rule": "maximum_l2_distance_between_pair_beta_vectors",
+        "score": 3.928244981694201
+      }
+    },
+    {
+      "beta_norms": [
+        1.0151404010161877,
+        2.6918668175474645
+      ],
+      "betas": [
+        [
+          -0.6620826721191406,
+          -0.6532120108604431,
+          0.3622279465198517,
+          0.14585092663764954,
+          0.044115301221609116,
+          0.011200208216905594,
+          0.09089946001768112,
+          0.050750330090522766,
+          0.007051835302263498,
+          0.005423946771770716
+        ],
+        [
+          1.9102731943130493,
+          -1.4660825729370117,
+          -1.1554009914398193,
+          0.09492052346467972,
+          0.11612626910209656,
+          0.2322799116373062,
+          0.16977210342884064,
+          0.03182336688041687,
+          -0.035096291452646255,
+          -0.07167641073465347
+        ]
+      ],
+      "caption": "One person stands beside another person who is seated, describing something with hand gestures in front of his/her chest. The other person raises his/her right hand to signal the first person to approach and then speaks. Finally, the first person walks over and sits across from the other person.",
+      "category": "shape_max_subject_beta_norm",
+      "gender": [
+        "female",
+        "male"
+      ],
+      "length": 150,
+      "name": "G025T005A029R022",
+      "pair_beta_distance": 3.1067549986842966,
+      "request_index": 135,
+      "selection": {
+        "rule": "maximum_subject_beta_l2_norm",
+        "score": 2.6918668175474645
+      }
+    }
+  ],
+  "repeat": 0,
+  "replication": 0,
+  "requests": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_00.npz",
+  "requests_sha256": "01d894c2e95183b2aaa510470819d64cd6c5862beb47b114320e91270d0100d7",
+  "schema": "hhc_qualitative_comparison_selection_v1",
+  "selection_is_metric_independent": true,
+  "selection_seed": 20260826,
+  "status": "pass",
+  "view_contract": {
+    "frame_positions": [
+      0.0,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "same_camera_and_axis_limits_within_case": true,
+    "same_request_and_repeat_across_methods": true
+  }
+}

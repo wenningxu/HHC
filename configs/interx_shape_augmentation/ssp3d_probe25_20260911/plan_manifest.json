@@ -1,0 +1,220 @@
+{
+  "augmented_split": "/mnt/8T-HDD/wenning/HHC/configs/interx_shape_augmentation/ssp3d_probe25_20260911/augmented_names.txt",
+  "augmented_split_sha256": "2850b6864d8b165108c3461d3cc3c9f5fa4ff19c076c045fc3ca7533924bc2f3",
+  "created_at_utc": "2026-09-11T18:46:27.440048+00:00",
+  "donor_pool_kind": "ssp3d_transferred_smplx",
+  "eligible_samples": 25,
+  "excluded": [],
+  "excluded_missing_manual_timing": 0,
+  "excluded_outside_training_eligibility": 0,
+  "excluded_samples": 0,
+  "inputs": {
+    "beta_dir": "/home/wenning/projects/MMM/dataset/interx/betas",
+    "contact_dir": "/home/wenning/projects/MMM/dataset/interx/contact",
+    "external_donor_manifest": "/mnt/8T-HDD/wenning/HHC/output/ssp3d_donor_probe4_20260911/ssp3d_smplx_donor_manifest.json",
+    "external_donor_manifest_sha256": "a84a9f2ee6d4b96d6a821500fa29526b050aa4624d52cb1cdad804cd524a45c4",
+    "external_donor_npz": {
+      "bytes": 1288,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/ssp3d_donor_probe4_20260911/ssp3d_smplx_donors.npz",
+      "sha256": "45c8768492f9f80745e33b77f9f831b11a7c39ff3322edc36ea266a524c52847"
+    },
+    "motion_file": "/home/wenning/projects/MMM/dataset/interx/motions/train.h5",
+    "motion_file_sha256": "42e242fcd267c83b095591bb3445887ffc2578c1e45eb036bbd0188f174a7d2a",
+    "split": "/mnt/8T-HDD/wenning/HHC/configs/interx_shape_augmentation/ssp3d_probe25_20260911/source_train25.txt",
+    "split_sha256": "789eb795a8b5e2dafa7ae27825a6a4afb087b74e4684cbe719924a7e70ba812d",
+    "text_dir": "/home/wenning/projects/MMM/dataset/interx/texts_processed"
+  },
+  "manual_timing_coverage_by_action": {
+    "003": {
+      "manual_timing_files": 3,
+      "split_samples": 3
+    },
+    "004": {
+      "manual_timing_files": 3,
+      "split_samples": 3
+    },
+    "007": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "008": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "009": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "010": {
+      "manual_timing_files": 2,
+      "split_samples": 2
+    },
+    "015": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "023": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "025": {
+      "manual_timing_files": 2,
+      "split_samples": 2
+    },
+    "026": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "027": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "028": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "030": {
+      "manual_timing_files": 2,
+      "split_samples": 2
+    },
+    "032": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "034": {
+      "manual_timing_files": 2,
+      "split_samples": 2
+    },
+    "035": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    },
+    "036": {
+      "manual_timing_files": 1,
+      "split_samples": 1
+    }
+  },
+  "official_train_samples": 25,
+  "policy": {
+    "caption": "first_processed_caption",
+    "crop": "max_contact_density_else_seeded_uniform",
+    "shape_sampling": "uniform_over_unique_same_gender_ssp3d_smplx_shapes",
+    "source_shape_excluded": true,
+    "timing": "require_explicit_manual_binary_annotation_file",
+    "two_different_donor_shapes_per_augmented_pair": true
+  },
+  "positive_timing_samples": 25,
+  "records": "/mnt/8T-HDD/wenning/HHC/configs/interx_shape_augmentation/ssp3d_probe25_20260911/augmentation_records.jsonl",
+  "records_sha256": "5f94197ebf129043b37c9c7a5445a18bf54bba78b615ac106d4fe4110c3389ac",
+  "schema": "hhc_interx_shape_augmentation_plan_v2",
+  "seed": 123,
+  "shape_pool": [
+    {
+      "betas": [
+        -0.8741500377655029,
+        -1.5968294143676758,
+        0.3981601595878601,
+        -0.32902154326438904,
+        -1.4816398620605469,
+        1.4390676021575928,
+        -0.4046865999698639,
+        0.019551154226064682,
+        -0.8695127964019775,
+        -0.03567087650299072
+      ],
+      "donor_file": "/mnt/8T-HDD/wenning/HHC/output/ssp3d_donor_probe4_20260911/ssp3d_smplx_donors.npz",
+      "donor_file_sha256": "45c8768492f9f80745e33b77f9f831b11a7c39ff3322edc36ea266a524c52847",
+      "donor_index": 0,
+      "donor_pool_kind": "ssp3d_transferred_smplx",
+      "gender": "female",
+      "shape_id": "433b50b02e05111cd43233247f2d268b45c057a6fc344d147ce928ef098a2466",
+      "source_identity_ids": [
+        "995bfc15123958bfbbc4ba0ceebf4faedf73641fa6033072bc6fd8c00e49310c"
+      ],
+      "transfer_vertex_rmse_m": 0.005192333302965963
+    },
+    {
+      "betas": [
+        1.1935460567474365,
+        4.019539833068848,
+        3.436145782470703,
+        0.855183482170105,
+        -0.5780324339866638,
+        -3.2493152618408203,
+        -0.6228177547454834,
+        0.11562927067279816,
+        3.5977070331573486,
+        4.3266754150390625
+      ],
+      "donor_file": "/mnt/8T-HDD/wenning/HHC/output/ssp3d_donor_probe4_20260911/ssp3d_smplx_donors.npz",
+      "donor_file_sha256": "45c8768492f9f80745e33b77f9f831b11a7c39ff3322edc36ea266a524c52847",
+      "donor_index": 2,
+      "donor_pool_kind": "ssp3d_transferred_smplx",
+      "gender": "male",
+      "shape_id": "5aeaa602869686e47557d75ac5ebb0399fdbe6078e0fe372ffed9e3804f6c6a3",
+      "source_identity_ids": [
+        "0ec8edcf96b9ee3ec64c540dbc060d8ba9623209617e0a66d24ca88fe6fde93d"
+      ],
+      "transfer_vertex_rmse_m": 0.00898100479912581
+    },
+    {
+      "betas": [
+        -0.3202705383300781,
+        -1.2831535339355469,
+        -0.9966899156570435,
+        1.936664342880249,
+        -2.6856439113616943,
+        0.038985610008239746,
+        0.22543172538280487,
+        0.20305874943733215,
+        0.2928272485733032,
+        -0.7416695356369019
+      ],
+      "donor_file": "/mnt/8T-HDD/wenning/HHC/output/ssp3d_donor_probe4_20260911/ssp3d_smplx_donors.npz",
+      "donor_file_sha256": "45c8768492f9f80745e33b77f9f831b11a7c39ff3322edc36ea266a524c52847",
+      "donor_index": 3,
+      "donor_pool_kind": "ssp3d_transferred_smplx",
+      "gender": "male",
+      "shape_id": "5d9878566263c3afd67a6aed7596178efaba4c0f0f8758d748e2d06ceb67f35b",
+      "source_identity_ids": [
+        "ce4b35832427b9effef957499602d04bae50d816446040318f053d67ab4497f9"
+      ],
+      "transfer_vertex_rmse_m": 0.005288430968060348
+    },
+    {
+      "betas": [
+        0.5123803019523621,
+        0.11012570559978485,
+        0.4910840690135956,
+        0.3363485336303711,
+        -2.4438681602478027,
+        0.4521713852882385,
+        -0.09520769864320755,
+        0.5695810317993164,
+        -0.35962197184562683,
+        0.7540503740310669
+      ],
+      "donor_file": "/mnt/8T-HDD/wenning/HHC/output/ssp3d_donor_probe4_20260911/ssp3d_smplx_donors.npz",
+      "donor_file_sha256": "45c8768492f9f80745e33b77f9f831b11a7c39ff3322edc36ea266a524c52847",
+      "donor_index": 1,
+      "donor_pool_kind": "ssp3d_transferred_smplx",
+      "gender": "female",
+      "shape_id": "992c567279ff0596126b6e1ffab37f83d545ea7858444645a58001b54c3e2a73",
+      "source_identity_ids": [
+        "d8f5ec4ffc51815973bfba67cb7db507ff5bd0e75f5532eb8463c05da97b7414"
+      ],
+      "transfer_vertex_rmse_m": 0.00497160298159361
+    }
+  ],
+  "status": "complete",
+  "thresholds": {
+    "max_output_frames": 150,
+    "max_source_frames": 999,
+    "min_frames": 30
+  },
+  "timing_source_counts": {
+    "manual_frame_annotation_file": 25
+  },
+  "unique_donor_shapes": 4,
+  "unique_train_person_shapes": 4
+}

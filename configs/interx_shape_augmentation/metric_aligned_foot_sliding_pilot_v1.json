@@ -1,0 +1,85 @@
+{
+  "schema": "hhc_interx_shape_augmentation_metric_aligned_foot_sliding_pilot_v1",
+  "status": "conditionally_preregistered",
+  "created_before_contactmean_pilot_completion": true,
+  "activation_condition": "the complete 25-pair frozen_initial plus active_contact_mean pilot fails the unchanged preregistered mean-foot-sliding criterion",
+  "dataset_scope": "Inter-X official train split only",
+  "motivation_snapshot": {
+    "path": "output/interx_shape_aug_pilot_contactmean_partial12_foot_sliding_diagnostic.json",
+    "sha256": "9cabee3f43170c8d8307d8b9cde883267829f840a3488446847e2427af3c7b58",
+    "implementation": "tools/diagnose_partial_shape_foot_sliding.py",
+    "implementation_sha256": "b6294a0bcc350cb4a8a27acd1ccb4c28c1c15cd714df9a9cbb2a5360c4210f69",
+    "completed_samples_at_preregistration": 12,
+    "samples_with_worse_foot_sliding": 12,
+    "mean_delta_after_minus_random_m_per_frame": 0.007032280928494099,
+    "median_delta_after_minus_random_m_per_frame": 0.006232151965377852,
+    "interpretation": "freezing the released stationary-and-grounded three-axis MSE mask does not control the official grounded-foot horizontal-speed metric"
+  },
+  "selection": {
+    "plan": "configs/interx_shape_augmentation/timing_covered_seed123_v2/plan_manifest.json",
+    "selection_seed": 20260828,
+    "positive_timing_only": true,
+    "sample_count": 25,
+    "random_shape_reference": "output/interx_shape_aug_pilot_random_seed20260828",
+    "contactmean_reference": "output/interx_shape_aug_pilot_optimized_flathand_frozenfoot_contactmean_query10475_seed20260828",
+    "candidate_result": "output/interx_shape_aug_pilot_optimized_flathand_groundedhorizontal_contactmean_framebatch8_query10475_seed20260828"
+  },
+  "single_factor_change": {
+    "factor": "foot_sliding_loss_contract",
+    "reference": "frozen_initial_stationary_and_grounded_three_axis_mse",
+    "candidate": "initial_or_current_grounded_horizontal_mean_speed",
+    "candidate_mask": "for each foot transition, union the detached iteration-0 grounded predicate with the detached current-iteration grounded predicate; grounded uses the unchanged per-foot height thresholds",
+    "candidate_loss": "mean Euclidean x/z displacement per frame over the union mask, summed over the two people",
+    "anti_gaming_reason": "the frozen initial-grounded component prevents the optimizer from escaping the loss merely by lifting an initially planted foot above the height threshold",
+    "metric_alignment": "the official gate measures Euclidean x/z displacement on grounded feet; the candidate uses the same axes, units and first-order reduction",
+    "scientific_label": "metric-alignment stabilization ablation; do not describe it as the released foot-skating loss"
+  },
+  "candidate_implementation": {
+    "helper": "optimization/metric_aligned_foot_sliding.py",
+    "helper_sha256": "f060fdf39edebe22b0df28a16f174d3b5acd4cf998c6fe8a7a44c0718bc6af02",
+    "test": "tests/test_metric_aligned_foot_sliding.py",
+    "test_sha256": "3ad126fb853211c9cc2781444d14b46783f9b4a7644ce0fccb798bd1368dd0bf",
+    "test_status_before_activation": "pass"
+  },
+  "frozen_unchanged_settings": {
+    "optimizer": "Adam",
+    "iterations": 100,
+    "learning_rate": 0.02,
+    "fine_stage_start": 50,
+    "signed_distance_backend": "VolumetricSMPL-1.0.4 flat_hand_mean",
+    "query_chunk": 10475,
+    "frame_batch_size": 8,
+    "frame_batching_authorization": "output/volumetric_smpl_flat_hand_serial_sampling_frame_batching_assessment.json",
+    "frame_batching_is_execution_only": "the frame-batching gate bounds value and gradient differences and does not change the objective",
+    "contact_regions": "GPT-5.6 Luna strict-v3 train cache",
+    "temporal_mask": "exact cropped manual Inter-X timing",
+    "contact_loss_reduction_policy": "active_contact_mean",
+    "foot_joint_indices": [7, 10, 8, 11],
+    "foot_height_thresholds_m": [0.12, 0.05, 0.12, 0.05],
+    "loss_weights": {
+      "attract": 1.0,
+      "pene": 5.0,
+      "reg": 1.0,
+      "smooth": 0.1,
+      "skate": 100.0,
+      "ground": 20.0
+    }
+  },
+  "comparisons": [
+    "candidate versus identical random_shape_reference for the unchanged full-augmentation authorization gate",
+    "candidate versus contactmean_reference on the same samples for the foot-loss-contract causal contrast"
+  ],
+  "authorization_gate": {
+    "path": "configs/interx_shape_augmentation/pilot_physical_gate_v1.json",
+    "sha256": "50dcc809de9ca06f806a7b602845053a1d03e8cb8e690e88c244cb8092dc7102",
+    "expected_sample_count": 25,
+    "decision_policy": "all unchanged criteria pass; no threshold may be relaxed after observing results"
+  },
+  "prohibited_changes": [
+    "loss-weight tuning",
+    "changing foot indices or height thresholds",
+    "changing samples, donor shapes, timing, contact regions, seed, optimizer, iteration count or stage boundary",
+    "changing contact, penetration, regularization, smoothness, acceleration or ground reductions",
+    "using validation/test generator metrics to authorize augmentation"
+  ]
+}

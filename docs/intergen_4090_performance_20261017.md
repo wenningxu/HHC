@@ -1,0 +1,21 @@
+# 4090 吞吐修复验收（2026-10-17 16:12 SGT）
+
+用户指出约5小时才1万步。原配置确实没有充分使用4090：12秒云端采样利用率10–33%、平均25.58%，功耗约102.6W；micro4×accum8，每步中位1.8684秒。数据加载约0.305秒/更新，不能解释全部延迟；每更新14项loss×8次主机标量读回及小microbatch增加同步和调用开销。
+
+云端短基准比较后已从完整84000恢复包切换同一实验为micro16×accum2，effective batch仍32。新训练PID20042，权重、优化器和Python/NumPy/Torch/CUDA RNG完整恢复；原2353有意退出，不恢复旧版。训练架构、数据、学习率绝对步数日程、704000目标及原micro4有效帧归一化分组保留。较大microbatch改变dropout执行及浮点顺序，不声称bitwise replay或FID改善。
+
+三组证据：首轮仅作速度探索，同micro优化器哈希不一致（CPU计数器别名）已明确否决等价结论；修复后的同micro4延迟日志版本与原版权重/优化器/输入/CPU及CUDA RNG哈希全部一致，速度约1.856→1.798秒；分组目标micro16×2短基准0.746秒，micro32×1为0.714秒但多约5GB显存，故选16。分组目标CPU验收最大梯度差0、最大loss差1.49e-8。
+
+实际续训前1000步耗时767.70秒，约0.768秒/步，相对原中位约2.43倍；最近三个50步区间0.756/0.783/0.811秒。每万步纯训练约2.1小时；原每万步验证/保存还约16分钟，未来耗时仍随长度、保存和评测变化。最后8秒GPU采样为0–3%发生在85000保存附近，不作为整程利用率，也不能宣称已满载显卡。
+
+84500新恢复包云CPU校验通过：2188977969字节，SHA256 `725a30c104a3475bbd79ec8884ba2194cea2c8a0de721062a361cbcce423d7af`，196个优化器状态、计数74500（历史10000步曾weights-only恢复，84000此次没有重置），所有权重/优化器张量有限、RNG齐备。最初身份断言失败为checkpoint的PosixPath和JSON字符串类型差异，路径相同；修正仅规范化source/output两个路径字段。验收脚本第一次误用model/rng键而报KeyError，按真实trainable_state及*_rng结构重验exit0，不隐瞒失败或冒充通过。
+
+单次迁移控制器20013启动fast后消失，原因未确定；独立guard保留20042。原SSH观察客户端103940在确认远端控制器已消失且fast84500保存后有意关闭，原exec28214最终exit1，不称控制器成功exit0。CPU队列修复脚本首次路径断言失败、无状态修改；修正后exit0完成排队迁移。
+
+HHC保持A4000保存等待，不占GPU。旧CPU等待17952、20161均为有意取代；新等待器20344使用独立v3源和配置，严格要求InterGen complete704000、最终checkpoint身份与step一致且训练进程退出。v3路径规范化已用CPU正/负例及真实84500恢复包验收；预检release_gate=false，无HHC子进程启动。原29项HHC绑定源码保持。Windows监控104244运行fast恢复器；local-checkpoint-policy明确禁下载。本轮仅源码、日志和小型JSON在本机，无权重下载。
+
+两项automation实际为PAUSED，保持其状态、原频率和目标线程；提示已指向v3并按UTF-8全文读回一致。它们目前不提供主动闲置保护。实际训练仍运行，不能停pod。
+
+证据：`output/hhc_sota_20261016/intergen_fast_runtime_acceptance_20261017.json`、`intergen_speed_probe_raw_evidence_20261017.json`及`intergen_speed_probe_records_20261017/`。新fast源码SHA d988fe14b657ba911d8588c8a2094157c144b7aa663f29c8418c615a391710e9；分组目标90075686d4131ea8d9a0e19f3af3f1618ba53f10ccbce386a6d69eb0b50cab9e；v3等待器b6092fc02dd3aaabfb080e970f77f2b55f7f4ab336e0073c3bbd8a74a36121cc，云端完整字节/SHA读回一致。
+
+此修复提高吞吐。HHC完整生成评分、正式比较和SOTA仍未完成；InterGen当前历史最佳仍为20000步训练内val FID24.314143，最近80000为32.159767，不能把吞吐提升当质量提升。

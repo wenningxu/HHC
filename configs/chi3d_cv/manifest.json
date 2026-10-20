@@ -1,0 +1,218 @@
+{
+  "folds": {
+    "G2": {
+      "held_out_group": "G2",
+      "no_identity_overlap": true,
+      "partitions_source_exactly": true,
+      "splits": {
+        "test": {
+          "actions": {
+            "Grab": 20,
+            "Handshake": 11,
+            "Hit": 25,
+            "HoldingHands": 6,
+            "Hug": 9,
+            "Kick": 16,
+            "Posing": 8,
+            "Push": 25
+          },
+          "groups": {
+            "G2": 120
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g2/test.txt",
+          "samples": 120,
+          "sha256": "47e8d4f63e5a8d9bda55749e710542b94a00771d0af239ca80e617a59402c326"
+        },
+        "train": {
+          "actions": {
+            "Grab": 36,
+            "Handshake": 18,
+            "Hit": 48,
+            "HoldingHands": 12,
+            "Hug": 18,
+            "Kick": 34,
+            "Posing": 14,
+            "Push": 43
+          },
+          "groups": {
+            "G3": 111,
+            "G4": 112
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g2/train.txt",
+          "samples": 223,
+          "sha256": "ee7aaef3d1d6b6b472bb46c7a3ddd0a8c121e37515da372295d349dd419b1ff2"
+        },
+        "validation": {
+          "actions": {
+            "Grab": 4,
+            "Handshake": 4,
+            "Hit": 6,
+            "HoldingHands": 2,
+            "Hug": 2,
+            "Kick": 4,
+            "Posing": 2,
+            "Push": 6
+          },
+          "groups": {
+            "G3": 15,
+            "G4": 15
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g2/validation.txt",
+          "samples": 30,
+          "sha256": "7dc19cec6ebb505c881610a8970dcd510473e5bceb6839279ae3aeabef8f1877"
+        }
+      }
+    },
+    "G3": {
+      "held_out_group": "G3",
+      "no_identity_overlap": true,
+      "partitions_source_exactly": true,
+      "splits": {
+        "test": {
+          "actions": {
+            "Grab": 20,
+            "Handshake": 11,
+            "Hit": 27,
+            "HoldingHands": 7,
+            "Hug": 10,
+            "Kick": 19,
+            "Posing": 8,
+            "Push": 24
+          },
+          "groups": {
+            "G3": 126
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g3/test.txt",
+          "samples": 126,
+          "sha256": "52e075ba14d9d29e41f233f352741fcaa35c4530b703aeed5d12cc4771676594"
+        },
+        "train": {
+          "actions": {
+            "Grab": 36,
+            "Handshake": 18,
+            "Hit": 46,
+            "HoldingHands": 11,
+            "Hug": 17,
+            "Kick": 31,
+            "Posing": 14,
+            "Push": 44
+          },
+          "groups": {
+            "G2": 105,
+            "G4": 112
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g3/train.txt",
+          "samples": 217,
+          "sha256": "eef91c4ff5577c49b73f205c9e663bb5c081f6197e4ea1b75444d5616c991a95"
+        },
+        "validation": {
+          "actions": {
+            "Grab": 4,
+            "Handshake": 4,
+            "Hit": 6,
+            "HoldingHands": 2,
+            "Hug": 2,
+            "Kick": 4,
+            "Posing": 2,
+            "Push": 6
+          },
+          "groups": {
+            "G2": 15,
+            "G4": 15
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g3/validation.txt",
+          "samples": 30,
+          "sha256": "73c37324ca1edd1a349ca42eecba1d5efb28efa75f4a9f03bc9424bc0f3049a8"
+        }
+      }
+    },
+    "G4": {
+      "held_out_group": "G4",
+      "no_identity_overlap": true,
+      "partitions_source_exactly": true,
+      "splits": {
+        "test": {
+          "actions": {
+            "Grab": 20,
+            "Handshake": 11,
+            "Hit": 27,
+            "HoldingHands": 7,
+            "Hug": 10,
+            "Kick": 19,
+            "Posing": 8,
+            "Push": 25
+          },
+          "groups": {
+            "G4": 127
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g4/test.txt",
+          "samples": 127,
+          "sha256": "efc1692762e7c00f779a06e9b6a3ae8f73b2f882c04522ef94451e49776b945f"
+        },
+        "train": {
+          "actions": {
+            "Grab": 36,
+            "Handshake": 18,
+            "Hit": 46,
+            "HoldingHands": 11,
+            "Hug": 17,
+            "Kick": 31,
+            "Posing": 14,
+            "Push": 43
+          },
+          "groups": {
+            "G2": 105,
+            "G3": 111
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g4/train.txt",
+          "samples": 216,
+          "sha256": "dd955cfa15cd377223a65278b41ddb3fa4d8149fa9d22ac51e7e8f594570f699"
+        },
+        "validation": {
+          "actions": {
+            "Grab": 4,
+            "Handshake": 4,
+            "Hit": 6,
+            "HoldingHands": 2,
+            "Hug": 2,
+            "Kick": 4,
+            "Posing": 2,
+            "Push": 6
+          },
+          "groups": {
+            "G2": 15,
+            "G3": 15
+          },
+          "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g4/validation.txt",
+          "samples": 30,
+          "sha256": "e5fa13b7bab6d8b0e8f3796873960bb1c897b20b94df9100414d4dcb72137895"
+        }
+      }
+    }
+  },
+  "inner_validation": {
+    "fraction": 0.1,
+    "method": "within each training group/action stratum, select ceil(N*fraction) lowest SHA256 ranks keyed by protocol version and held-out group"
+  },
+  "protocol_version": "chi3d_leave_one_group_out_v1",
+  "source": {
+    "actions": {
+      "Grab": 60,
+      "Handshake": 33,
+      "Hit": 79,
+      "HoldingHands": 20,
+      "Hug": 29,
+      "Kick": 54,
+      "Posing": 24,
+      "Push": 74
+    },
+    "groups": {
+      "G2": 120,
+      "G3": 126,
+      "G4": 127
+    },
+    "path": "/home/wenning/projects/MMM/dataset/chi3d/splits/train.txt",
+    "samples": 373,
+    "sha256": "bd881df0ffe7e8044de42fad7ce327cd3c602d44fe64a8a4fe4ec56a4702325e"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "experiments": {
+    "action": {
+      "feature_dimensions": 672,
+      "frames": 1321409,
+      "mean": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/interx_generalization/action/stats/generalization_action_Mean.npy",
+        "sha256": "12001af6c1c3f43f03ffcb749d9072cf5f80049ae0c9a0aa96f03547c9af629b",
+        "shape": [
+          672
+        ]
+      },
+      "sequences": 7239,
+      "stats_prefix": "generalization_action",
+      "std": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/interx_generalization/action/stats/generalization_action_Std.npy",
+        "sha256": "dae1b96ca18b66c86a567f21c7d916b914462690e6a3d268ea5b2cf339229a57",
+        "shape": [
+          672
+        ]
+      },
+      "train_split_sha256": "cca9b2812534f8b795f2d196ac46c5a93742659784fa45b544f04e75abfea613",
+      "zero_variance_dimensions_pinned_to_one": 42
+    },
+    "shape": {
+      "feature_dimensions": 672,
+      "frames": 1302360,
+      "mean": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/interx_generalization/shape/stats/generalization_shape_Mean.npy",
+        "sha256": "4a6ea6bc0e3e7e62a843130cd2fc641012a6a772c67e15ebd0030191d45703c1",
+        "shape": [
+          672
+        ]
+      },
+      "sequences": 7335,
+      "stats_prefix": "generalization_shape",
+      "std": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/interx_generalization/shape/stats/generalization_shape_Std.npy",
+        "sha256": "e907ab6399e451cfeb5fd77fb5da10ed797c29eb55afd35bfcac558ae1f3a900",
+        "shape": [
+          672
+        ]
+      },
+      "train_split_sha256": "fcf460de914a921e6377cea9a8b38a52ce8afe2c75a2bbac2d2a0ae844152482",
+      "zero_variance_dimensions_pinned_to_one": 42
+    }
+  },
+  "implementation_sha256": "440def18b9d261b9281a575d2be5b90fddd397ec15aeb44a16be9751414231b7",
+  "motion_file": {
+    "path": "/home/wenning/projects/MMM/dataset/interx/motions/train.h5"
+  },
+  "reference_check": {
+    "existing_mean_sha256": "a54dcfd012e07742077050e3a7ee1b4a2918ba2825466ab698d0cf6f9e438446",
+    "existing_std_sha256": "23a2cf52a19cbaab16334821f2a3183e915c671f59fac702b68a1256742bc376",
+    "feature_dimensions": 672,
+    "frames": 1626457,
+    "mean_max_absolute_error": 2.384185791015625e-07,
+    "sequences": 9110,
+    "std_max_absolute_error": 2.980232238769531e-07,
+    "zero_variance_dimensions_pinned_to_one": 42
+  },
+  "schema": "hhc_interx_generalization_train_only_stats_v1",
+  "split_manifest": {
+    "path": "/mnt/8T-HDD/wenning/HHC/configs/interx_generalization/manifest.json",
+    "sha256": "93fdfb1abccfbe026df1997123b859a7f959b5090f9adbe4b8ba2c88aea9f132"
+  },
+  "status": "pass"
+}

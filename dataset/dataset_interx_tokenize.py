@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import random
+import hashlib
 import codecs as cs
 import h5py
 import re
@@ -16,12 +17,43 @@ from utils.word_vectorizer import WordVectorizer, POS_enumerator
 from torch.utils.data._utils.collate import default_collate
 from utils.motion_process import swap_left_right_hhi, MotionNormalizerTorchInterX
 
+
+CACHE_CROP_POLICY = 'source_single_single_double_per_sample_sha256_v1'
+
+
+def deterministic_cache_crop(name, motion_length, unit_length, cache_seed):
+    """Return the source crop policy without depending on loader/RNG state.
+
+    The released MMM cache builder samples ``single/single/double`` and a
+    uniform crop offset from process-global RNGs.  Keying those same choices by
+    (seed, sample name) makes interrupted cache construction byte-reproducible
+    while retaining the source distribution.
+    """
+    digest = hashlib.sha256(
+        f'{int(cache_seed)}\0{name}'.encode('utf-8')
+    ).digest()
+    sample_seed = int.from_bytes(digest[:4], byteorder='little', signed=False)
+    numpy_rng = np.random.RandomState(sample_seed)
+    python_rng = random.Random(sample_seed)
+    crop_mode = numpy_rng.choice(['single', 'single', 'double'])
+    token_units = motion_length // unit_length
+    if crop_mode == 'double':
+        token_units -= 1
+    cropped_length = token_units * unit_length
+    crop_start = python_rng.randint(0, motion_length - cropped_length)
+    return cropped_length, crop_start
+
 def collate_fn(batch):
     batch.sort(key=lambda x: x[3], reverse=True)
     return default_collate(batch)
 
 class Text2MotionDatasetV2HHI(data.Dataset):
-    def __init__(self, split_file, w_vectorizer, motion_file, unit_length=4, fill=False):
+    def __init__(self, split_file, w_vectorizer, motion_file, unit_length=4,
+                 fill=False, cache_seed=None, include_names=None,
+                 beta_dir='dataset/interx/betas',
+                 contact_dir='dataset/interx/contact',
+                 fallback_beta_dir=None, fallback_contact_dir=None,
+                 strict_assets=False):
         self.w_vectorizer = w_vectorizer
         self.motion_file = motion_file
         self.max_length = 20
@@ -29,11 +61,17 @@ class Text2MotionDatasetV2HHI(data.Dataset):
         self.max_motion_length = 152
         self.num_person = 2
         self.unit_length = unit_length
-        self.normalizer = MotionNormalizerTorchInterX()
+        # MGT token caches must use the same raw-translation normalization as
+        # the paper VQ tokenizer they are encoded with.
+        self.normalizer = MotionNormalizerTorchInterX(motion_rep='raw')
         self.max_text_len = 35
-        self.beta_dir = 'dataset/interx/betas'
-        self.contact_dir = 'dataset/interx/contact'
+        self.beta_dir = beta_dir
+        self.contact_dir = contact_dir
+        self.fallback_beta_dir = fallback_beta_dir
+        self.fallback_contact_dir = fallback_contact_dir
+        self.strict_assets = strict_assets
         self.fill = fill
+        self.cache_seed = cache_seed
         min_motion_len = 30
 
         data_dict = {}
@@ -41,6 +79,9 @@ class Text2MotionDatasetV2HHI(data.Dataset):
         with cs.open(split_file, 'r') as f:
             for line in f.readlines():
                 id_list.append(line.strip())
+        if include_names is not None:
+            include_names = set(include_names)
+            id_list = [name for name in id_list if name in include_names]
         new_name_list = []
         length_list = []
         with h5py.File(self.motion_file, 'r') as mf:
@@ -54,12 +95,22 @@ class Text2MotionDatasetV2HHI(data.Dataset):
                     group_str = match.group(1)  # e.g., '031'
                     group = int(group_str) - 1 # 转为整数：'031' -> 31
                     group = np.array([0, group, 1, group])
-                    beta_data = np.load(pjoin(self.beta_dir, name + '.npz'), allow_pickle=True)
+                    beta_path = pjoin(self.beta_dir, name + '.npz')
+                    beta_from_primary = os.path.isfile(beta_path)
+                    if not os.path.isfile(beta_path) and self.fallback_beta_dir:
+                        beta_path = pjoin(self.fallback_beta_dir, name + '.npz')
+                    beta_data = np.load(beta_path, allow_pickle=True)
                     betas = beta_data['betas'].reshape(-1,)  # 形状应为 (2, 10)
                     contact_path = pjoin(self.contact_dir, name + '.npy')
+                    if not os.path.isfile(contact_path) and self.fallback_contact_dir:
+                        contact_path = pjoin(self.fallback_contact_dir, name + '.npy')
                     if os.path.exists(contact_path):
                         contact = np.load(contact_path)
                     else:
+                        if self.strict_assets and beta_from_primary:
+                            raise FileNotFoundError(
+                                f'augmented sample lacks contact timing: {contact_path}'
+                            )
                         contact = np.zeros((motion.shape[0],), dtype=np.float32)
                     gender_list_str = beta_data['gender']  # 这是一个列表, 例如 ['male', 'female']
                     gender_codes = [0 if g == 'male' else 1 for g in gender_list_str]
@@ -75,8 +126,11 @@ class Text2MotionDatasetV2HHI(data.Dataset):
                     length_list.append(len(motion))
 
                 except Exception as e:
+                    if self.strict_assets:
+                        raise RuntimeError(
+                            f'failed to load tokenizer asset for {name}: {e}'
+                        ) from e
                     print(e)
-                    pass
         name_list, length_list = zip(*sorted(zip(new_name_list, length_list), key=lambda x: x[1]))
 
         self.length_arr = np.array(length_list)
@@ -102,17 +156,23 @@ class Text2MotionDatasetV2HHI(data.Dataset):
         data = self.data_dict[name]
         motion, m_length, betas, gender, group, contact = data['motion'], data['length'], data['betas'], data['gender'], data['group'], data['contact']
 
-        # Crop the motions in to times of 4, and introduce small variations
-        if self.unit_length < 10:
-            coin2 = np.random.choice(['single', 'single', 'double'])
+        # Preserve MMM's single/single/double crop distribution.  Cache builds
+        # key the random choices by sample so an interrupted/resumed export is
+        # independent of shuffle order, worker scheduling, and existing files.
+        if self.cache_seed is not None and self.unit_length < 10:
+            m_length, idx = deterministic_cache_crop(
+                name, m_length, self.unit_length, self.cache_seed
+            )
         else:
-            coin2 = 'single'
-
-        if coin2 == 'double':
-            m_length = (m_length // self.unit_length - 1) * self.unit_length
-        elif coin2 == 'single':
-            m_length = (m_length // self.unit_length) * self.unit_length
-        idx = random.randint(0, len(motion) - m_length)
+            if self.unit_length < 10:
+                coin2 = np.random.choice(['single', 'single', 'double'])
+            else:
+                coin2 = 'single'
+            if coin2 == 'double':
+                m_length = (m_length // self.unit_length - 1) * self.unit_length
+            elif coin2 == 'single':
+                m_length = (m_length // self.unit_length) * self.unit_length
+            idx = random.randint(0, len(motion) - m_length)
         motion = motion[idx:idx + m_length]
         contact = contact[idx:idx + m_length]
         if self.fill:
@@ -178,8 +238,22 @@ def DATALoader(dataset_name,
                motion_file,
                num_workers=8,
                unit_length=8,
-               shuffle=True):
-    trainSet = Text2MotionDatasetV2HHI(split_file, w_vectorizer, motion_file,unit_length)
+               shuffle=True,
+               cache_seed=None,
+               include_names=None,
+               beta_dir='dataset/interx/betas',
+               contact_dir='dataset/interx/contact',
+               fallback_beta_dir=None,
+               fallback_contact_dir=None,
+               strict_assets=False):
+    trainSet = Text2MotionDatasetV2HHI(
+        split_file, w_vectorizer, motion_file, unit_length,
+        cache_seed=cache_seed, include_names=include_names,
+        beta_dir=beta_dir, contact_dir=contact_dir,
+        fallback_beta_dir=fallback_beta_dir,
+        fallback_contact_dir=fallback_contact_dir,
+        strict_assets=strict_assets,
+    )
     train_loader = torch.utils.data.DataLoader(trainSet,
                                                batch_size,
                                                shuffle=shuffle,

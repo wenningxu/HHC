@@ -1,0 +1,94 @@
+{
+  "schema": "hhc_deferred_cleanup_candidates_v1",
+  "updated_at": "2026-09-07T23:56:11+01:00",
+  "policy": {
+    "status": "deferred_no_deletion",
+    "instruction": "Do not delete or move anything while the user is unavailable. Record candidates only. If disk space becomes genuinely insufficient while the user is asleep, pause new high-write work and record the blocker; do not issue an approval prompt or delete silently.",
+    "last_observed_filesystem": "/mnt/8T-HDD",
+    "last_observed_available": "276G",
+    "last_observed_utilization": "97%",
+    "automatic_cleanup_allowed": false,
+    "approval_requests_while_user_is_asleep": false,
+    "user_sleep_lock_confirmed_at": "2026-09-07T23:56:11+01:00",
+    "user_sleep_lock": "Record cleanup candidates only; do not delete or move files and do not request cleanup approval while the user is asleep."
+  },
+  "candidates": [
+    {
+      "paths": [
+        "output/t2i_trans/2026-09-07-11-49-54_hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4/prevalidation-000020000.ckpt",
+        "output/t2i_trans/2026-09-07-11-49-54_hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4/postvalidation-000020000.ckpt"
+      ],
+      "observed_total_bytes": 6802000492,
+      "priority": "high_if_space_is_needed",
+      "reason": "Temporary optimizer/RNG-state isolation snapshots created around validation; each is about 3.4 GB.",
+      "retain_until": "The no-shape finalizer, official joint validation selection, and final reproducibility audit have all completed successfully.",
+      "action_now": "retain"
+    },
+    {
+      "path": "output/hhc_no_shape_v4_pilot50k_joint_val_byteidentical_sourcepath_backup",
+      "observed_size": "704M",
+      "priority": "medium_if_space_is_needed",
+      "reason": "Preliminary joint-validation generations made from a byte-identical request file under the superseded source path; retained as diagnostic evidence.",
+      "retain_until": "Formal regeneration and checkpoint selection using output/interx_official_val_requests/manifest.json are complete and their artifacts are verified.",
+      "action_now": "retain"
+    },
+    {
+      "paths": [
+        "output/t2i_trans/2026-09-07-11-49-54_hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4/last.ckpt",
+        "output/t2i_trans/2026-09-07-11-49-54_hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4/latest-000050000.ckpt"
+      ],
+      "observed_total_bytes": 6802003046,
+      "priority": "low_review_only",
+      "reason": "Apparently redundant final full-state checkpoints, but they have distinct inodes and must not be assumed identical without a later content/provenance audit.",
+      "retain_until": "All final evaluation and reproducibility work is complete, hashes/state roles are documented, and the user explicitly approves removal of any redundant copy.",
+      "action_now": "retain"
+    },
+    {
+      "path": "output/interx_shape_aug_volumetric_fast_steps120_full_shard0",
+      "observed_size": "43M",
+      "priority": "very_low_review_only",
+      "reason": "Earlier VolumetricSMPL shape-optimization shard; potentially useful for regression and speed diagnostics.",
+      "retain_until": "The AMASS-donor shape-augmentation pipeline has succeeded and this shard is confirmed unnecessary by the user.",
+      "action_now": "retain"
+    },
+    {
+      "paths": [
+        "output/interhuman_fair_requests",
+        "output/interhuman_fair_requests_v2"
+      ],
+      "observed_total_bytes": 20037005,
+      "priority": "very_low_review_only",
+      "reason": "Superseded small request manifests retained as diagnostic evidence: v1 omitted the released min_length=15 filter and v2 retained caption trailing whitespace removed by official __getitem__.strip.",
+      "retain_until": "The final InterHuman protocol report is complete and the user explicitly approves removing superseded diagnostic manifests.",
+      "action_now": "retain"
+    },
+    {
+      "paths": [
+        "dataset/interhuman_official/motions_processed.zip",
+        "dataset/interhuman_official/motions_processed.zip.part00",
+        "dataset/interhuman_official/motions_processed.zip.part01",
+        "dataset/interhuman_official/motions_processed.zip.part02",
+        "dataset/interhuman_official/motions_processed.zip.part03",
+        "dataset/interhuman_official/motions_processed.zip.part04",
+        "dataset/interhuman_official/motions_processed.zip.part05",
+        "dataset/interhuman_official/motions_processed.zip.part06",
+        "dataset/interhuman_official/motions_processed.zip.part07",
+        "dataset/interhuman_official/motions_processed.zip.part08"
+      ],
+      "observed_combined_bytes": 4924056438,
+      "potential_reclaim_bytes_after_retaining_one_equivalent_archive_form": 2462028219,
+      "priority": "medium_if_space_is_needed",
+      "reason": "The assembled ZIP and the nine retained download parts each total exactly 2,462,028,219 bytes, so one archive form may be redundant. Byte-count equality alone is not proof of content equivalence.",
+      "retain_until": "The extracted official InterHuman motion tree, archive integrity, and assembled-versus-parts content hashes have been verified, and the user explicitly approves retaining only one archive form.",
+      "action_now": "retain"
+    }
+  ],
+  "excluded_from_cleanup": [
+    "all selected/model-only checkpoints",
+    "all current official-path validation and test generations",
+    "all evaluator outputs and manifests",
+    "all W&B logs",
+    "all source datasets, SMPL assets, and AMASS donor assets",
+    "anything not explicitly listed above"
+  ]
+}

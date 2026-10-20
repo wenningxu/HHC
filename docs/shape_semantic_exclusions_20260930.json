@@ -1,0 +1,14 @@
+{
+  "status": "withhold_pending_semantic_review",
+  "scope": "Withhold these original-cache augmented outputs from training until reviewed repairs are integrated and re-assessed. Does not change physical gates, original data, caches, timing, or the requested denominator. This is not an exhaustive semantic audit.",
+  "evidence": ["docs/shape_pair_repair_results_20260912.md", "docs/shape_text_contact_review_20260912.md", "docs/PROGRESS.md"],
+  "entries": [
+    {"augmented_name": "G026T001A009R022__shapeaug_s00000123", "reason": "Sit/lap second relation has reversed hand-arm ownership; diagnostic repair is not integrated into production."},
+    {"augmented_name": "G045T002A010R003__shapeaug_s00000123", "reason": "Reciprocal slap second actor is inconsistent; original timing is all zero and actual contact remains unresolved."},
+    {"augmented_name": "G001T003A019R024__shapeaug_s00000123", "reason": "Reciprocal arm-grab second relation has inconsistent ownership; diagnostic correction leaves the second relation geometrically uncertain."},
+    {"augmented_name": "G053T002A011R007__shapeaug_s00000123", "reason": "Reciprocal back-pat ownership and shared timing need correction; diagnostic relation-specific timing is not integrated into production."},
+    {"augmented_name": "G013T007A030R001__shapeaug_s00000123", "reason": "Wrong slap hand and kick actor; kick target is not established and the old timing omits the kick event."},
+    {"augmented_name": "G019T006A000R023__shapeaug_s00000123", "reason": "Caption assigns a back pat to the other person, but geometry mainly supports the same hug actor; caption-motion correspondence remains unresolved."},
+    {"augmented_name": "G023T002A011R011__shapeaug_s00000123", "reason": "Back-pat contact is missing from the production cache; diagnostic repair passes physical checks but has not replaced the production output."}
+  ]
+}

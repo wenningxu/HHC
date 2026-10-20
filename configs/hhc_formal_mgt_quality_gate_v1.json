@@ -1,0 +1,29 @@
+{
+  "schema": "hhc_formal_mgt_quality_gate_policy_v1",
+  "status": "active",
+  "purpose": "Operational scheduling gate before expensive shape-augmentation MGT training; not a reported hypothesis test.",
+  "expected_samples": 1696,
+  "expected_requests_sha256": "01d894c2e95183b2aaa510470819d64cd6c5862beb47b114320e91270d0100d7",
+  "expected_vq_checkpoint_sha256": "fdf5afaa5d3513f933254fafc831f6046f7c38b5e649db08fb6be7e0ce1006bb",
+  "expected_normalization_mean_sha256": "a54dcfd012e07742077050e3a7ee1b4a2918ba2825466ab698d0cf6f9e438446",
+  "expected_normalization_std_sha256": "23a2cf52a19cbaab16334821f2a3183e915c671f59fac702b68a1256742bc376",
+  "expected_evaluator_checkpoint_sha256": "b1699f13276c044d8b7ae5f6063eb241b7ef96d7e92c878857abd5081e40701e",
+  "expected_evaluator_options_sha256": "f4ddaa81157259ce6b795f456be98263e50cd788a7800c30aacbfc2361b2d6dd",
+  "sampling_contract": {
+    "sampler": "sample_intra_cas",
+    "sampling_steps": 50,
+    "sampling_steps_unit": "outer_maskgit_iterations",
+    "temperature": 0.5,
+    "cfg_scale": 3.5,
+    "contact_guidance": true,
+    "contact_guidance_scale": 1.0,
+    "contact_timing_source": "request_oracle"
+  },
+  "quality_thresholds": {
+    "maximum_reference_fid": 0.2,
+    "maximum_candidate_fid": 0.3,
+    "maximum_candidate_minus_reference_fid": 0.12,
+    "maximum_candidate_to_reference_fid_ratio": 1.65
+  },
+  "threshold_rationale": "The byte-reproduced historical MGT is approximately 0.187 and the selected raw-12288 VQ reconstruction is approximately 0.294 on this exact evaluator. The gate only rejects a clearly broken generator before multi-day augmentation runs."
+}

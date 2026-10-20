@@ -1,0 +1,249 @@
+{
+  "schema": "hhc_review_requirement_matrix_v1",
+  "source_review": {
+    "path": "HHC_review.pdf",
+    "sha256": "1740d8a23627e4ee81276227b350a088f3d1e16e4916d730bab609e1ca9a5d8f"
+  },
+  "plan_path": "docs/review_experiment_plan.md",
+  "scope_policy": {
+    "current_dataset": "Inter-X",
+    "other_datasets": "deferred_until_interx_complete",
+    "shape_generalization": "train_only_random_shape_plus_contact_timing_plus_optimization_augmentation",
+    "action_generalization": "cancelled_no_claim",
+    "baseline_retraining": "author_checkpoint_first; retrain_only_when_missing_or_protocol_incompatible",
+    "interhuman_local_execution": "do_not_rerun; result_is_being_produced_on_another_server"
+  },
+  "requirements": [
+    {
+      "id": "optimization_contribution",
+      "sources": ["Meta-review", "Reviewer ZyzM"],
+      "issue": "The optimization stage has only a marginal aggregate FID gain and its contribution is not attributed.",
+      "plan_sections": [3],
+      "status": "active_queued",
+      "evidence": [
+        "tests/test_original_mmm_optimizer_restoration.py",
+        "tools/run_original_mmm_shape_pilot25.sh",
+        "output/interx_shape_aug_original_mmm_pilot5_gate.json",
+        "tools/build_current_shape_augmentation_results.py"
+      ]
+    },
+    {
+      "id": "chi3d_quantitative_generalization",
+      "sources": ["Meta-review", "Reviewer L4xb", "Reviewer ZyzM"],
+      "issue": "CHI3D evidence is too limited and lacks a complete quantitative baseline comparison.",
+      "plan_sections": [5],
+      "status": "deferred_after_interx",
+      "evidence": [
+        "tools/audit_chi3d_assets.py",
+        "output/review_external_prerequisites.json"
+      ]
+    },
+    {
+      "id": "mmodality_analysis",
+      "sources": ["Meta-review", "Reviewer L4xb", "Reviewer ZyzM"],
+      "issue": "The MModality drop needs direct quality-diversity evidence rather than interpretation alone.",
+      "plan_sections": [6],
+      "status": "complete",
+      "evidence": [
+        "tools/run_hhc_sampling_pareto.py",
+        "tools/summarize_hhc_sampling_pareto.py",
+        "tools/analyze_fair_interx_multimodality.py",
+        "output/fair_eval/hhc_historical_paper_mask_sampling_pareto_no_timing_rep0/summary.json"
+      ]
+    },
+    {
+      "id": "llm_robustness",
+      "sources": ["Meta-review", "Reviewer ZyzM"],
+      "issue": "Reliance on a powerful external LLM requires robustness and failure analysis.",
+      "plan_sections": [9],
+      "status": "complete",
+      "evidence": [
+        "output/interx_llm_robustness/evaluation.json",
+        "output/interx_terra_robustness_cache_audit.json"
+      ]
+    },
+    {
+      "id": "contact_metric_fairness",
+      "sources": ["Reviewer L4xb"],
+      "issue": "A contact metric defined by LLM output is unfair to baselines; add geometry- and annotation-defined metrics.",
+      "plan_sections": [4],
+      "status": "implemented_waiting_final_generations",
+            "evidence": [
+                "tools/score_fair_interx_physical.py",
+                "tools/score_volumetric_smpl_npz.py",
+                "tools/compare_current_interx_mesh_methods_paired.py",
+                "output/current_interx_mesh_physical/hhc_oracle_contact_vs_no_contact_paired.json"
+      ]
+    },
+    {
+      "id": "optimization_runtime",
+      "sources": ["Reviewer L4xb"],
+      "issue": "Report the LLM and contact-optimization runtime.",
+      "plan_sections": [3, 14],
+      "status": "implemented_waiting_final_generations",
+      "evidence": [
+        "tools/run_interx_shape_augmentation.py",
+        "tools/build_original_mmm_shape_pilot_direct_gate.py",
+        "output/original_mmm_optimization_provenance_audit.json",
+        "tools/run_original_mmm_shape_pilot25.sh",
+        "tools/aggregate_fair_interx_generation_timings.py"
+      ]
+    },
+    {
+      "id": "timotion_qualitative",
+      "sources": ["Reviewer L4xb"],
+      "issue": "Add qualitative comparisons against TiMotion.",
+      "plan_sections": [12],
+      "status": "complete",
+      "evidence": [
+        "configs/qualitative_comparison_selection.json",
+        "tools/render_fair_interx_qualitative.py",
+        "output/current_interx_qualitative/manifest.json"
+      ]
+    },
+    {
+      "id": "figure_2_typo",
+      "sources": ["Reviewer L4xb"],
+      "issue": "Correct Maksed in the Figure 2 caption.",
+      "plan_sections": [16],
+      "status": "manuscript_pending",
+      "evidence": ["HHC__Generating_Human_Human_Close_Interactions_with_Contacts.pdf"]
+    },
+    {
+      "id": "second_generation_dataset",
+      "sources": ["Reviewer ZyzM", "Reviewer NbvC"],
+      "issue": "Evaluate on a second generation dataset with a proper split and fair baselines.",
+      "plan_sections": [11],
+      "status": "deferred_after_interx",
+      "evidence": [
+        "tools/audit_interhuman_official_assets.py",
+        "output/review_external_prerequisites.json"
+      ]
+    },
+    {
+      "id": "llm_parsing_accuracy",
+      "sources": ["Reviewer ZyzM"],
+      "issue": "Quantify LLM parsing accuracy and invalid-output behavior.",
+      "plan_sections": [9],
+      "status": "complete",
+      "evidence": [
+        "output/interx_llm_robustness/evaluation.json",
+        "output/interx_luna_test_frozen_cache_audit.json"
+      ]
+    },
+    {
+      "id": "foot_skating",
+      "sources": ["Reviewer ZyzM"],
+      "issue": "Quantify visible foot-skating artifacts and verify optimization does not worsen them.",
+      "plan_sections": [10],
+      "status": "implemented_waiting_final_generations",
+            "evidence": [
+                "tools/score_fair_interx_physical.py",
+                "tools/score_volumetric_smpl_npz.py",
+                "tools/compare_current_interx_mesh_methods_paired.py",
+                "output/current_interx_mesh_physical/hhc_oracle_contact_vs_no_contact_paired.json"
+      ]
+    },
+    {
+      "id": "no_contact_timing",
+      "sources": ["Reviewer ZyzM"],
+      "issue": "Measure performance when exact contact timing is not provided.",
+      "plan_sections": [8],
+      "status": "complete",
+      "evidence": [
+        "tools/run_hhc_contact_timing_ablation.py",
+        "tools/summarize_hhc_contact_timing_ablation.py",
+        "output/fair_eval/hhc_historical_paper_mask_contact_timing_ablation_rep0/summary.json"
+      ]
+    },
+    {
+      "id": "weaker_llm_sensitivity",
+      "sources": ["Reviewer ZyzM"],
+      "issue": "Test sensitivity to a cheaper or weaker LLM and parsing failures.",
+      "plan_sections": [9],
+      "status": "complete",
+      "evidence": ["output/interx_llm_robustness/evaluation.json"]
+    },
+    {
+      "id": "interx_split_protocol",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Disclose the Inter-X split construction and body-shape distribution.",
+      "plan_sections": [7, 15],
+      "status": "complete",
+      "evidence": [
+        "configs/fair_interx_protocol.yaml",
+        "output/interx_protocol_audit.json"
+      ]
+    },
+    {
+      "id": "unseen_shape_quantitative",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Provide quantitative evidence for performance across body shapes.",
+      "plan_sections": [7],
+      "status": "active_queued",
+      "evidence": [
+        "tests/test_original_mmm_optimizer_restoration.py",
+        "tools/run_original_mmm_shape_pilot25.sh",
+        "output/interx_shape_aug_random_seed123_v2_completion_audit.json",
+        "tools/audit_hybrid_shape_cache_preflight.py",
+        "tools/finalize_current_interx_shape_augmentation_results.sh",
+        "tools/build_current_shape_augmentation_results.py"
+      ]
+    },
+    {
+      "id": "unseen_action_quantitative",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Clarify whether test actions are unseen and quantify action generalization if claimed.",
+      "plan_sections": [7],
+      "status": "cancelled_no_claim",
+      "evidence": ["docs/review_experiment_plan.md"]
+    },
+    {
+      "id": "shape_qualitative_baselines",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Show more diverse shape-conditioned examples and compare them against baselines.",
+      "plan_sections": [12],
+      "status": "active_queued",
+      "evidence": [
+        "configs/qualitative_comparison_selection.json",
+        "tools/render_fair_interx_qualitative.py"
+      ]
+    },
+    {
+      "id": "contact_penetration_main_table",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Move contact and penetration metrics into the main results.",
+      "plan_sections": [4, 16],
+      "status": "implemented_waiting_final_generations",
+      "evidence": [
+        "tools/score_fair_interx_physical.py",
+        "tools/export_fair_h5_to_optimizer_npz.py",
+        "tools/score_volumetric_smpl_npz.py",
+        "tools/run_final_interx_mesh_physical.py",
+        "tools/compare_current_interx_mesh_methods_paired.py",
+        "tools/build_current_interx_main_table.py",
+        "tools/build_current_interx_review_bundle.py"
+      ]
+    },
+    {
+      "id": "user_study_values",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Report a real blinded user study numerically in the main paper.",
+      "plan_sections": [13, 16],
+      "status": "external_pending",
+      "evidence": ["output/review_external_prerequisites.json"]
+    },
+    {
+      "id": "llm_version_and_hallucination",
+      "sources": ["Reviewer NbvC"],
+      "issue": "Disclose the exact LLM, validate outputs, and guard against hallucinated constraints.",
+      "plan_sections": [9, 14, 16],
+      "status": "complete",
+      "evidence": [
+        "output/interx_luna_train_cache_audit.json",
+        "output/interx_luna_test_frozen_cache_audit.json",
+        "output/interx_llm_robustness/evaluation.json"
+      ]
+    }
+  ]
+}

@@ -9,6 +9,11 @@ import time
 # 1. 基础几何工具函数
 # ==========================================
 from optimization.human_body_prior.body_model.body_model import BodyModel
+from optimization.volumetric_smpl_backend import VolumetricSMPLBackend
+from optimization.metric_aligned_foot_sliding import (
+    freeze_initial_grounded_foot_mask,
+    initial_or_current_grounded_horizontal_mean_speed,
+)
 from utils.motion_process import get_spatial_min_interaction_label_single
 
 def vertex_normals(vertices, faces):
@@ -59,15 +64,11 @@ def point2point_signed(x, y, x_normals=None, y_normals=None, return_vector=False
     计算点云 x 到 y 的有符号距离 (x -> y)
     x, y: [B, N, 3]
     """
-    # 尝试导入高效库，否则报错或需替换为暴力实现
-    import chamfer_distance as chd
-    ch_dist = chd.ChamferDistance()
-
-    # 计算 Chamfer Distance
-    # x_near: y中离x最近的点 (shape like x)
-    # y_near: x中离y最近的点 (shape like y)
-    # xidx_near: 索引
-    x_near, y_near, xidx_near, yidx_near = ch_dist(x, y, x_normals=x_normals, y_normals=y_normals)
+    # ChamferDistance calls this same KNN in both directions, but this helper
+    # only consumes x->y indices. Keep the exact search, skip the unused reverse.
+    from pytorch3d.ops.knn import knn_points
+    with torch.no_grad():
+        xidx_near = knn_points(x, y, K=1).idx[..., 0]
 
     # 我们主要关心 x 到 y 的距离 (x 中的点是否贴合/穿透 y)
     # 注意：ch_dist 返回的 x_near 是 float dist^2 还是坐标？
@@ -165,11 +166,37 @@ def point2point_signed(x, y, x_normals=None, y_normals=None, return_vector=False
 # ==========================================
 
 class DyadicInteractionLoss(nn.Module):
-    def __init__(self, device='cuda:1'):
+    def __init__(
+        self,
+        device='cuda:1',
+        signed_distance_backend='nearest_vertex',
+        volumetric_smpl_query_chunk=512,
+        volumetric_smpl_frame_batch_size=1,
+        volumetric_smpl_seed=1234,
+        volumetric_smpl_penetration_vertex_count=None,
+        volumetric_smpl_body_encoding_samples=None,
+        volumetric_smpl_penetration_frame_count=None,
+        volumetric_smpl_backend=None,
+        foot_contact_mask_policy='released_dynamic',
+        penetration_loss_reduction='penetrating_vertex_mean',
+        aux_temporal_weighting='released_broadcast',
+        static_body_models=None,
+    ):
         """
         :param smpl_model: SMPL/SMPL-X 模型实例
         """
         super().__init__()
+        if foot_contact_mask_policy not in (
+                'released_dynamic', 'initial_or_current_grounded_horizontal_mean_speed'):
+            raise ValueError(f'unsupported foot policy: {foot_contact_mask_policy}')
+        self.foot_contact_mask_policy = foot_contact_mask_policy
+        self._initial_grounded_foot_masks = {}
+        if penetration_loss_reduction not in ('penetrating_vertex_mean', 'frame_sum'):
+            raise ValueError(f'unsupported penetration reduction: {penetration_loss_reduction}')
+        self.penetration_loss_reduction = penetration_loss_reduction
+        if aux_temporal_weighting not in ('released_broadcast', 'per_frame'):
+            raise ValueError(f'unsupported aux temporal weighting: {aux_temporal_weighting}')
+        self.aux_temporal_weighting = aux_temporal_weighting
 
         num_betas = 10
         downsample = 4
@@ -177,11 +204,76 @@ class DyadicInteractionLoss(nn.Module):
         neutral_bm_path = 'body_models/smplx/SMPLX_NEUTRAL.npz'
         male_bm_path = 'body_models/smplx/SMPLX_MALE.npz'
         female_bm_path = 'body_models/smplx/SMPLX_FEMALE.npz'
-        self.neutral_bm = BodyModel(bm_fname=neutral_bm_path, num_betas=num_betas).to(device)
-        self.male_bm = BodyModel(bm_fname=male_bm_path, num_betas=num_betas).to(device)
-        self.female_bm = BodyModel(bm_fname=female_bm_path, num_betas=num_betas).to(device)
+        # Opt-in, caller-owned per-device models; all sample/loss state stays fresh.
+        models = {} if static_body_models is None else static_body_models
+        if not isinstance(models, dict) or (models and set(models) != {'neutral', 'male', 'female'}):
+            raise ValueError('static_body_models must be empty or contain all three genders')
+        if not models:
+            models.update({gender: BodyModel(bm_fname=path, num_betas=num_betas).to(device)
+                           for gender, path in [('neutral', neutral_bm_path),
+                                                ('male', male_bm_path), ('female', female_bm_path)]})
+        target_device = torch.device(device)
+        if target_device.type == 'cuda' and target_device.index is None:
+            target_device = torch.device('cuda', torch.cuda.current_device())
+        for model in models.values():
+            if list(model.parameters()) or any(b.device != target_device for b in model.buffers()):
+                raise ValueError('static body models must be parameter-free and on the requested device')
+        self.neutral_bm, self.male_bm, self.female_bm = (models[g] for g in ('neutral', 'male', 'female'))
 
         self.device = device
+        if signed_distance_backend not in ('nearest_vertex', 'volumetric_smpl'):
+            raise ValueError(
+                'signed_distance_backend must be nearest_vertex or volumetric_smpl'
+            )
+        self.signed_distance_backend = signed_distance_backend
+        self.volumetric_smpl_seed = int(volumetric_smpl_seed)
+        self.volumetric_smpl_penetration_vertex_count = (
+            None
+            if volumetric_smpl_penetration_vertex_count is None
+            else int(volumetric_smpl_penetration_vertex_count)
+        )
+        if (
+            self.volumetric_smpl_penetration_vertex_count is not None
+            and self.volumetric_smpl_penetration_vertex_count < 1
+        ):
+            raise ValueError(
+                'volumetric_smpl_penetration_vertex_count must be positive'
+            )
+        self._penetration_vertex_indices = {}
+        self.volumetric_smpl_penetration_frame_count = (
+            None
+            if volumetric_smpl_penetration_frame_count is None
+            else int(volumetric_smpl_penetration_frame_count)
+        )
+        if (
+            self.volumetric_smpl_penetration_frame_count is not None
+            and self.volumetric_smpl_penetration_frame_count < 1
+        ):
+            raise ValueError(
+                'volumetric_smpl_penetration_frame_count must be positive'
+            )
+        self._optimization_epoch = 0
+        self.volumetric_smpl_frame_batch_size = int(
+            volumetric_smpl_frame_batch_size
+        )
+        if self.volumetric_smpl_frame_batch_size < 1:
+            raise ValueError('volumetric_smpl_frame_batch_size must be positive')
+        self.volumetric_smpl = None
+        if signed_distance_backend == 'volumetric_smpl':
+            self.volumetric_smpl = (
+                volumetric_smpl_backend
+                if volumetric_smpl_backend is not None
+                else VolumetricSMPLBackend(
+                    model_root='body_models',
+                    device=device,
+                    max_query_points_per_call=volumetric_smpl_query_chunk,
+                    body_encoding_samples=(
+                        volumetric_smpl_body_encoding_samples
+                    ),
+                )
+            )
+        self._active_volume_A = None
+        self._active_volume_B = None
 
         # --- 默认权重配置 (可在外部修改) ---
         self.weights = {
@@ -213,6 +305,64 @@ class DyadicInteractionLoss(nn.Module):
         self.fixed_pairs = {}  # 存储锚定点
 
         self.current_winner_regions = {}
+
+    def _compute_volume_geometry(self, params):
+        if self.volumetric_smpl is None:
+            return None
+        return self.volumetric_smpl.body(params)
+
+    def _sample_penetration_vertices(self, vertices):
+        count = self.volumetric_smpl_penetration_vertex_count
+        if count is None or count >= vertices.shape[1]:
+            return vertices
+        key = (int(vertices.shape[1]), int(count))
+        if key not in self._penetration_vertex_indices:
+            generator = torch.Generator(device='cpu')
+            generator.manual_seed(self.volumetric_smpl_seed)
+            indices = torch.randperm(key[0], generator=generator)[:key[1]]
+            self._penetration_vertex_indices[key] = indices.to(vertices.device)
+        return vertices.index_select(1, self._penetration_vertex_indices[key])
+
+    def _surface_signed_distance(
+        self,
+        query_vertices,
+        target_vertices,
+        target_normals,
+        target_volume,
+        active_frame_mask=None,
+    ):
+        """Change only the signed-distance scalar; nearest indices stay Chamfer."""
+        if self.signed_distance_backend == 'volumetric_smpl':
+            if target_volume is None:
+                raise RuntimeError('VolumetricSMPL target geometry is unavailable')
+            target_output, target_gender = target_volume
+            if not target_vertices.requires_grad:
+                target_output = self.volumetric_smpl.detached_output(target_output)
+            if active_frame_mask is not None:
+                active_indices = torch.nonzero(
+                    active_frame_mask.reshape(-1) > 0,
+                    as_tuple=False,
+                ).reshape(-1)
+                if active_indices.numel() == 0:
+                    return query_vertices.new_zeros(query_vertices.shape[:2])
+                active_query = query_vertices.index_select(0, active_indices)
+                active_target = self.volumetric_smpl._slice_output(
+                    target_output, active_indices
+                )
+                active_distance = self.volumetric_smpl.signed_distance(
+                    active_query, active_target, target_gender
+                )
+                return query_vertices.new_zeros(
+                    query_vertices.shape[:2]
+                ).index_copy(0, active_indices, active_distance)
+            return self.volumetric_smpl.signed_distance(
+                query_vertices, target_output, target_gender
+            )
+        return point2point_signed(
+            query_vertices,
+            target_vertices,
+            y_normals=target_normals,
+        )
 
     def _compute_geometry(self, params):
         body_pose = params['pose_body']
@@ -262,9 +412,15 @@ class DyadicInteractionLoss(nn.Module):
             )
 
             # 方案 2: B 是 P1 (交换输入)
+            original_volume_A = self._active_volume_A
+            original_volume_B = self._active_volume_B
+            self._active_volume_A = original_volume_B
+            self._active_volume_B = original_volume_A
             loss_2, _ = self._calc_semantic_contact_loss(
                 vB, vA, nB, nA, interaction_pairs, temporal_mask
             )
+            self._active_volume_A = original_volume_A
+            self._active_volume_B = original_volume_B
 
         if loss_2 < loss_1:
             # print(f"  > Swap Detected! Loss(B=P1):{loss_2:.3f} < Loss(A=P1):{loss_1:.3f}")
@@ -411,10 +567,21 @@ class DyadicInteractionLoss(nn.Module):
 
         # 计算 A -> B 的距离 (通常双向计算更稳，或者只算主动方->被动方)
         # dist_A2B: A 中的点到 B 表面最近点的有符号距离
-        dist_A2B, idx_nearest_on_B, vec_A2B, _ = point2point_signed(
+        nearest_dist_A2B, idx_nearest_on_B, vec_A2B, _ = point2point_signed(
             vA_contact, vB_contact,
             x_normals=nA_contact, y_normals=nB_contact,
             return_vector=True
+        )
+        dist_A2B = (
+            nearest_dist_A2B
+            if self.signed_distance_backend == 'nearest_vertex'
+            else self._surface_signed_distance(
+                vA_contact,
+                vB_contact,
+                nB_contact,
+                self._active_volume_B,
+                temporal_mask,
+            )
         )
 
         # --- A. 距离吸引 (Attraction) ---
@@ -518,8 +685,16 @@ class DyadicInteractionLoss(nn.Module):
 
             self.current_winner_regions[i] = (idx_A, idx_B)
 
-            dist_signed_A, idx_nearest_B, _, _ = point2point_signed(
+            nearest_dist_A, idx_nearest_B, _, _ = point2point_signed(
                 sub_A, sub_B.detach(), x_normals=nA, y_normals=nB.detach(), return_vector=True
+            )
+            dist_signed_A = (
+                nearest_dist_A
+                if self.signed_distance_backend == 'nearest_vertex'
+                else self._surface_signed_distance(
+                    sub_A, sub_B.detach(), nB.detach(), self._active_volume_B,
+                    temporal_mask,
+                )
             )
             dist_abs_A = torch.relu(dist_signed_A)
             k_A = max(1, int(len(idx_A) * area_ratio))
@@ -533,8 +708,16 @@ class DyadicInteractionLoss(nn.Module):
             nB_selected = torch.gather(nB, 1, idx_gather_B)
             loss_align_A = ((torch.sum(nA_selected * nB_selected, dim=-1) + 1.0) ** 2).mean(dim=1, keepdim=True) * align_weight
 
-            dist_signed_B, idx_nearest_A, _, _ = point2point_signed(
+            nearest_dist_B, idx_nearest_A, _, _ = point2point_signed(
                 sub_B, sub_A.detach(), x_normals=nB, y_normals=nA.detach(), return_vector=True
+            )
+            dist_signed_B = (
+                nearest_dist_B
+                if self.signed_distance_backend == 'nearest_vertex'
+                else self._surface_signed_distance(
+                    sub_B, sub_A.detach(), nA.detach(), self._active_volume_A,
+                    temporal_mask,
+                )
             )
             dist_abs_B = torch.relu(dist_signed_B)
             k_B = max(1, int(len(idx_B) * area_ratio))
@@ -713,8 +896,19 @@ class DyadicInteractionLoss(nn.Module):
             self.current_winner_regions[i] = (best_idx_A_global, best_idx_B_global)
 
             # --- A -> B ---
-            dist_signed_A, idx_nearest_B, vec_A2B, _ = point2point_signed(best_sub_A, best_sub_B.detach(), x_normals=best_nA,
+            nearest_dist_A, idx_nearest_B, vec_A2B, _ = point2point_signed(best_sub_A, best_sub_B.detach(), x_normals=best_nA,
                                                               y_normals=best_nB.detach(), return_vector=True)
+            dist_signed_A = (
+                nearest_dist_A
+                if self.signed_distance_backend == 'nearest_vertex'
+                else self._surface_signed_distance(
+                    best_sub_A,
+                    best_sub_B.detach(),
+                    best_nB.detach(),
+                    self._active_volume_B,
+                    temporal_mask,
+                )
+            )
             dist_abs_A = torch.relu(dist_signed_A)
 
             k_A = max(1, int(best_idx_A_len * curr_top_k_ratio))
@@ -733,8 +927,19 @@ class DyadicInteractionLoss(nn.Module):
                 loss_align_A = torch.zeros_like(loss_attract_A)
 
             # --- B -> A ---
-            dist_signed_B, idx_nearest_A, vec_B2A, _ = point2point_signed(best_sub_B, best_sub_A.detach(), x_normals=best_nB,
+            nearest_dist_B, idx_nearest_A, vec_B2A, _ = point2point_signed(best_sub_B, best_sub_A.detach(), x_normals=best_nB,
                                                               y_normals=best_nA.detach(), return_vector=True)
+            dist_signed_B = (
+                nearest_dist_B
+                if self.signed_distance_backend == 'nearest_vertex'
+                else self._surface_signed_distance(
+                    best_sub_B,
+                    best_sub_A.detach(),
+                    best_nA.detach(),
+                    self._active_volume_A,
+                    temporal_mask,
+                )
+            )
             dist_abs_B = torch.relu(dist_signed_B)
             k_B = max(1, int(best_idx_B_len * curr_top_k_ratio))
             topk_vals_B, topk_indices_B = torch.topk(dist_abs_B, k=k_B, dim=1, largest=False)
@@ -786,6 +991,107 @@ class DyadicInteractionLoss(nn.Module):
         - normalize_by_num_penetrating=True: 优化口径，除以穿透点数，保持梯度稳定。
         - normalize_by_num_penetrating=False: 指标口径，直接返回总 pene，不做归一化。
         """
+        if self.signed_distance_backend == 'volumetric_smpl':
+            if self._active_volume_A is None or self._active_volume_B is None:
+                raise RuntimeError('VolumetricSMPL active body geometry is unavailable')
+            output_A, gender_A = self._active_volume_A
+            output_B, gender_B = self._active_volume_B
+            query_verts_A = self._sample_penetration_vertices(verts_A)
+            query_verts_B = self._sample_penetration_vertices(verts_B)
+            pene_temporal_mask = temporal_mask
+            frame_count = self.volumetric_smpl_penetration_frame_count
+            if frame_count is not None and frame_count < verts_A.shape[0]:
+                generator = torch.Generator(device='cpu')
+                generator.manual_seed(
+                    self.volumetric_smpl_seed + int(self._optimization_epoch)
+                )
+                frame_indices = torch.randperm(
+                    verts_A.shape[0], generator=generator
+                )[:frame_count].sort().values.to(verts_A.device)
+                query_verts_A = query_verts_A.index_select(0, frame_indices)
+                query_verts_B = query_verts_B.index_select(0, frame_indices)
+                verts_A_pene = verts_A.index_select(0, frame_indices)
+                verts_B_pene = verts_B.index_select(0, frame_indices)
+                norms_A_pene = norms_A.index_select(0, frame_indices)
+                norms_B_pene = norms_B.index_select(0, frame_indices)
+                output_A = self.volumetric_smpl._slice_output(
+                    output_A, frame_indices
+                )
+                output_B = self.volumetric_smpl._slice_output(
+                    output_B, frame_indices
+                )
+                if temporal_mask is not None:
+                    pene_temporal_mask = temporal_mask.index_select(
+                        0, frame_indices
+                    )
+            else:
+                verts_A_pene, verts_B_pene = verts_A, verts_B
+                norms_A_pene, norms_B_pene = norms_A, norms_B
+            weight_val = 2.0 * ratio if ratio < 1 else 2.0
+            if self.volumetric_smpl_penetration_vertex_count is not None:
+                # Bidirectional query-only gradients still update both people:
+                # B is the query in B->A and A is the query in A->B.  Detaching
+                # each target permits one batched body encoding instead of a
+                # differentiable encoding for every frame.
+                dist_B2A = self._surface_signed_distance(
+                    query_verts_B,
+                    verts_A_pene.detach(),
+                    norms_A_pene.detach(),
+                    (output_A, gender_A),
+                )
+                dist_A2B = self._surface_signed_distance(
+                    query_verts_A,
+                    verts_B_pene.detach(),
+                    norms_B_pene.detach(),
+                    (output_B, gender_B),
+                )
+                if pene_temporal_mask is None:
+                    current_thresh = dist_A2B.new_tensor(thresh_shallow)
+                else:
+                    current_thresh = torch.where(
+                        pene_temporal_mask.view(-1, 1) > 0.1,
+                        dist_A2B.new_tensor(thresh_deep),
+                        dist_A2B.new_tensor(thresh_shallow),
+                    )
+
+                def reduce_sampled(dist_signed):
+                    active = (
+                        (dist_signed < 0)
+                        & (dist_signed.abs() < current_thresh)
+                    )
+                    numerator = weight_val * (dist_signed[active] ** 2).sum()
+                    if normalize_by_num_penetrating and bool(active.any()):
+                        return numerator / active.sum().float()
+                    return numerator
+
+                return reduce_sampled(dist_B2A) + reduce_sampled(dist_A2B)
+
+            sum_B2A, count_B2A = (
+                self.volumetric_smpl.thresholded_penetration_squared(
+                    query_verts_B, output_A, gender_A, temporal_mask,
+                    thresh_shallow, thresh_deep, weight_val,
+                    self.volumetric_smpl_frame_batch_size,
+                )
+            )
+            sum_A2B, count_A2B = (
+                self.volumetric_smpl.thresholded_penetration_squared(
+                    query_verts_A, output_B, gender_B, temporal_mask,
+                    thresh_shallow, thresh_deep, weight_val,
+                    self.volumetric_smpl_frame_batch_size,
+                )
+            )
+            if normalize_by_num_penetrating:
+                loss_B2A = (
+                    sum_B2A / count_B2A.float()
+                    if bool(count_B2A > 0) else sum_B2A
+                )
+                loss_A2B = (
+                    sum_A2B / count_A2B.float()
+                    if bool(count_A2B > 0) else sum_A2B
+                )
+                return loss_B2A + loss_A2B
+            return sum_B2A + sum_A2B
+
         # --- 1. 计算双向距离 ---
         d_B2A = point2point_signed(verts_B, verts_A, x_normals=norms_B, y_normals=norms_A)
         d_A2B = point2point_signed(verts_A, verts_B, x_normals=norms_A, y_normals=norms_B)
@@ -853,14 +1159,15 @@ class DyadicInteractionLoss(nn.Module):
         """
         优化专用 pene loss：除以 num_penetrating，保证优化时梯度尺度稳定。
         """
-        return self._calc_penetration_loss_impl(
+        loss = self._calc_penetration_loss_impl(
             verts_A, verts_B, norms_A, norms_B,
             temporal_mask=temporal_mask,
             ratio=ratio,
-            normalize_by_num_penetrating=True,
+            normalize_by_num_penetrating=(self.penetration_loss_reduction == 'penetrating_vertex_mean'),
             thresh_shallow=0.2,
             thresh_deep=0.5,
         )
+        return loss / verts_A.shape[0] if self.penetration_loss_reduction == 'frame_sum' else loss
 
     def _calc_penetration_metric(self, verts_A, verts_B, norms_A, norms_B, temporal_mask=None, ratio=1.0):
         """
@@ -878,6 +1185,15 @@ class DyadicInteractionLoss(nn.Module):
     # --------------------------------------------------
     #  Module 3: Aux Losses (Regularization)
     # --------------------------------------------------
+    def _metric_aligned_skate_loss(self, joints, person):
+        # Match evaluation's skeleton-only floor; never shift penetration meshes.
+        grounded_joints = joints.clone()
+        grounded_joints[..., 1] = joints[..., 1] - joints[:, :55, 1].min().detach()
+        if person not in self._initial_grounded_foot_masks:
+            self._initial_grounded_foot_masks[person] = freeze_initial_grounded_foot_mask(grounded_joints)
+        return initial_or_current_grounded_horizontal_mean_speed(
+            grounded_joints, self._initial_grounded_foot_masks[person])
+
     def _calc_aux_losses(self, params_A, params_B, params_A_init, params_B_init, joints_A, joints_B, verts_A, verts_B, temporal_mask=None):
         # 1. Reg Pose
         mask_penalty_ratio = 3.0
@@ -907,6 +1223,8 @@ class DyadicInteractionLoss(nn.Module):
             def weighted_mse(pred, target, w):
                 # pred: [T, D], w: [T, 1]
                 diff = (pred - target) ** 2
+                if self.aux_temporal_weighting == 'per_frame':
+                    w = w.reshape(T, *([1] * (diff.ndim - 1)))
                 # 广播 w 到 D 维度，计算加权平均
                 return torch.mean(diff * w)
 
@@ -945,6 +1263,8 @@ class DyadicInteractionLoss(nn.Module):
             velocity = joints[1:] - joints[:-1]
             # 对应的权重: 取 t=1 到 T 的权重 (或者 t=0 到 T-1，这里取后半段比较合理，表示"进入该帧的速度")
             w_vel = weights[1:].unsqueeze(-1)  # [T-1, 1, 1] 用于广播到 J, 3
+            if self.aux_temporal_weighting == 'per_frame':
+                w_vel = weights[1:].reshape(-1, 1, 1)
 
             # 加权平滑 Loss
             loss_smooth = torch.mean((velocity ** 2) * w_vel)
@@ -953,6 +1273,8 @@ class DyadicInteractionLoss(nn.Module):
             if joints.shape[0] >= 3:
                 acc = joints[2:] - 2 * joints[1:-1] + joints[:-2]
                 w_acc = weights[2:].unsqueeze(-1)  # [T-2, 1, 1]
+                if self.aux_temporal_weighting == 'per_frame':
+                    w_acc = weights[2:].reshape(-1, 1, 1)
                 loss_acc = torch.sum((acc ** 2) * w_acc) / (w_acc.sum().float()+1e-6)
             else:
                 loss_acc = torch.tensor(0.0, device=device)
@@ -983,8 +1305,11 @@ class DyadicInteractionLoss(nn.Module):
             return torch.mean((feet_vel[contact] - torch.zeros_like(feet_vel)[contact]) ** 2)  # 软约束
         #
         # print(joints_A.shape, joints_B.shape)
-        loss_skate = skate_loss(joints_A, self.lfoot_idx+self.rfoot_idx) + \
-                     skate_loss(joints_B, self.lfoot_idx+self.rfoot_idx)
+        if self.foot_contact_mask_policy == 'initial_or_current_grounded_horizontal_mean_speed':
+            loss_skate = self._metric_aligned_skate_loss(joints_A, 'A') + self._metric_aligned_skate_loss(joints_B, 'B')
+        else:
+            loss_skate = skate_loss(joints_A, self.lfoot_idx+self.rfoot_idx) + \
+                         skate_loss(joints_B, self.lfoot_idx+self.rfoot_idx)
         #
         # # 4. Ground Penetration
         loss_ground = torch.mean(F.relu(-verts_A[:, :, 1])) + torch.mean(F.relu(-verts_B[:, :, 1]))
@@ -1013,8 +1338,17 @@ class DyadicInteractionLoss(nn.Module):
 
         # 1. Geometry Calculation
         # tick = time.time()
+        if self.volumetric_smpl is not None:
+            self._optimization_epoch = int(epoch)
+            self.volumetric_smpl.begin_iteration(
+                seed=self.volumetric_smpl_seed + int(epoch)
+            )
         v1, j1, n1 = self._compute_geometry(params_A)
         v2, j2, n2 = self._compute_geometry(params_B)
+        volume1 = self._compute_volume_geometry(params_A)
+        volume2 = self._compute_volume_geometry(params_B)
+        self._active_volume_A = volume1
+        self._active_volume_B = volume2
         # print('time for geometry calculation: {:.3f}s'.format(time.time() - tick))
 
         role_pairs = interaction_pairs
@@ -1043,6 +1377,8 @@ class DyadicInteractionLoss(nn.Module):
             jA, jB = j2, j1
             params_A, params_B = params_B, params_A
             params_A_init, params_B_init = params_B_init, params_A_init
+            self._active_volume_A = volume2
+            self._active_volume_B = volume1
             # 如果有显式索引，也要交换 (假设 idx_A 对应 params_A)
             # contact_indices_A, contact_indices_B = contact_indices_B, contact_indices_A
         else:
@@ -1050,6 +1386,8 @@ class DyadicInteractionLoss(nn.Module):
             vA, vB = v1, v2
             nA, nB = n1, n2
             jA, jB = j1, j2
+            self._active_volume_A = volume1
+            self._active_volume_B = volume2
             # params_P1, params_P2 = params_A, params_B
             # init_P1, init_P2 = params_A_init, params_B_init
             # idx_P1, idx_P2 = contact_indices_A, contact_indices_B
@@ -1119,8 +1457,14 @@ class DyadicInteractionLoss(nn.Module):
         return total_loss, loss_dict
 
     def forward_semantic_metric(self, paramA, paramB, interaction_pairs, temporal_mask=None):
+        if self.volumetric_smpl is not None:
+            self.volumetric_smpl.begin_iteration(seed=self.volumetric_smpl_seed)
         verts_A, joints_A, n_A  = self._compute_geometry(paramA)
         verts_B, joints_B, n_B  = self._compute_geometry(paramB)
+        volume_A = self._compute_volume_geometry(paramA)
+        volume_B = self._compute_volume_geometry(paramB)
+        self._active_volume_A = volume_A
+        self._active_volume_B = volume_B
 
         if (temporal_mask is None) and (interaction_pairs is not None):
             labels, min_dists = get_spatial_min_interaction_label_single(joints_A,
@@ -1136,6 +1480,8 @@ class DyadicInteractionLoss(nn.Module):
             # 交换：B 是 P1，A 是 P2
             verts_A, verts_B = verts_B, verts_A
             n_A, n_B = n_B, n_A
+            self._active_volume_A = volume_B
+            self._active_volume_B = volume_A
 
 
 

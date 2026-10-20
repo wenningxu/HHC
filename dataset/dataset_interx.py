@@ -26,7 +26,10 @@ class MotionDatasetV2HHI(data.Dataset):
         self.genders = []
         self.groups = []
         self.num_person = 2
-        self.normalizer = MotionNormalizerTorchInterX()
+        # The representation selector must be identical on normalization and
+        # every loss/export de-normalization path.  The legacy default is the
+        # velocity/root-feature statistics and is invalid for raw translation.
+        self.normalizer = MotionNormalizerTorchInterX(motion_rep=motion_rep)
         self.beta_dir = 'dataset/interx/betas'
         self.split = split_file
         self.motion_rep = motion_rep
@@ -622,4 +625,3 @@ def cycle(iterable):
 #         x_denormalized = x.clone() * self.motion_std.to(device) + self.motion_mean.to(device)
 #
 #         return x_denormalized
-

@@ -1,0 +1,73 @@
+{
+  "schema": "hhc_interx_shape_augmentation_frozen_foot_pilot_v1",
+  "status": "conditionally_preregistered",
+  "created_before_released_pilot_completion": true,
+  "activation_condition": "the complete 25-pair released_dynamic pilot fails the preregistered foot-sliding criterion",
+  "dataset_scope": "Inter-X official train split only",
+  "selection": {
+    "plan": "configs/interx_shape_augmentation/timing_covered_seed123_v2/plan_manifest.json",
+    "selection_seed": 20260828,
+    "positive_timing_only": true,
+    "sample_count": 25,
+    "random_shape_reference": "output/interx_shape_aug_pilot_random_seed20260828",
+    "released_dynamic_result": "output/interx_shape_aug_pilot_optimized_flathand_query10475_seed20260828",
+    "frozen_initial_result": "output/interx_shape_aug_pilot_optimized_flathand_frozenfoot_query10475_seed20260828"
+  },
+  "single_factor_change": {
+    "factor": "foot_contact_mask_policy",
+    "released_dynamic": "recompute the released stationary-and-grounded predicate from current optimized joints every iteration",
+    "frozen_initial": "evaluate that exact predicate on iteration-0 joints once and reuse the detached boolean mask for all 100 iterations"
+  },
+  "frozen_unchanged_settings": {
+    "optimizer": "Adam",
+    "iterations": 100,
+    "learning_rate": 0.02,
+    "fine_stage_start": 50,
+    "signed_distance_backend": "VolumetricSMPL-1.0.4 flat_hand_mean",
+    "query_chunk": 10475,
+    "contact_regions": "GPT-5.6 Luna strict-v3 train cache",
+    "temporal_mask": "exact cropped manual Inter-X timing",
+    "foot_joint_indices": [7, 10, 8, 11],
+    "foot_height_thresholds_m": [0.12, 0.05, 0.12, 0.05],
+    "foot_squared_3d_speed_threshold": 0.001,
+    "foot_velocity_loss": "mean of squared x/y/z velocity elements selected by the mask",
+    "foot_skate_weight": 100.0,
+    "loss_weights": {
+      "attract": 1.0,
+      "pene": 5.0,
+      "reg": 1.0,
+      "smooth": 0.1,
+      "skate": 100.0,
+      "ground": 20.0
+    }
+  },
+  "comparisons": [
+    "frozen_initial versus identical random_shape_reference for the unchanged full-augmentation authorization gate",
+    "frozen_initial versus released_dynamic on the same samples for the single-factor causal contrast"
+  ],
+  "authorization_gate": {
+    "path": "configs/interx_shape_augmentation/pilot_physical_gate_v1.json",
+    "expected_sample_count": 25,
+    "criteria": {
+      "paper_eq6_squared_sum_m2_per_frame": {
+        "maximum_mean_delta": 0.0,
+        "maximum_bootstrap_95ci_upper": 0.0
+      },
+      "penetrating_vertex_fraction": {
+        "maximum_mean_delta": 0.0
+      },
+      "mean_foot_sliding_m_per_frame": {
+        "maximum_mean_delta": 0.0
+      }
+    },
+    "bootstrap_samples": 10000,
+    "decision_policy": "all criteria pass; no threshold may be relaxed after observing results"
+  },
+  "prohibited_changes": [
+    "loss-weight tuning",
+    "changing the foot velocity from three axes to horizontal-only",
+    "changing foot indices, height thresholds or speed threshold",
+    "changing samples, donor shapes, timing, contact regions, seed, optimizer or iteration count",
+    "using validation/test generator metrics to authorize augmentation"
+  ]
+}

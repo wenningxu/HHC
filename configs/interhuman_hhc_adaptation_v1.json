@@ -1,0 +1,181 @@
+{
+  "schema": "interhuman_hhc_adaptation_contract_v1",
+  "status": "protocol_frozen_implementation_pending_interx_completion",
+  "execution_gate": {
+    "launch_training_now": false,
+    "reason": "InterHuman work starts only after the active Inter-X no-shape and AMASS shape-augmentation experiments finish.",
+    "baseline_policy": "Do not rerun the InterHuman baseline already being evaluated on the user's other server."
+  },
+  "official_data": {
+    "root": "dataset/interhuman_official",
+    "asset_audit": "output/interhuman_official_assets_audit.json",
+    "asset_audit_required_status": "pass",
+    "raw_person_motion_shape": "(T, 492)",
+    "processed_representation": "official InterMask process_motion_np output, 262 dimensions per person; paired HHC VQ input is [person1_262, person2_262] = 524D",
+    "effective_split_counts_after_missing_motion_filter": {
+      "train": 6021,
+      "val": 580,
+      "test": 1176
+    },
+    "effective_text_split_counts_after_released_loader_filters": {
+      "train": 5637,
+      "val": 547,
+      "test": 1098
+    },
+    "released_loader_exclusions_after_file_presence_filter": {
+      "train_non_utf8": [5834],
+      "train_decodable_shorter_than_15_count": 383,
+      "val_shorter_than_15_count": 33,
+      "test_non_utf8": [4642],
+      "test_shorter_than_15_count": 77,
+      "blank_line_annotations": "retained by released readlines/replace behavior as empty-caption choices, not filtered"
+    },
+    "official_split_ids_without_motion": [3945, 4106],
+    "mean": "/mnt/8T-HDD/wenning/InterMask/data/stats/global_mean.npy",
+    "mean_sha256": "2f97b88889c773551cd597c32e88bfa070c2fb1721a992a80bfb7cf4c22e03b6",
+    "std": "/mnt/8T-HDD/wenning/InterMask/data/stats/global_std.npy",
+    "std_sha256": "dd5988b979e9803786ab497f5945316c2d52b97c90b593d0427220fd49b03e4b",
+    "stats_identity": "byte-identical to the CoShMDM InterHuman global_mean/global_std files",
+    "official_intermask_source_hashes": {
+      "data/interhuman.py": "abf921b687e62f73f101eda789f2c13ca8cd615a3866700e562fe2d4104d9fa1",
+      "data/utils.py": "16cce02600004466a6b0aed45f383b248f2b8fa61577faee3caba3281864abf0",
+      "data/quaternion.py": "7cefe9caa94daf15da55a746ef1f74f96eeac636ebbccbed6da95de9c7747722",
+      "models/losses.py": "c1aa688052e237d803c45731e698c3fa97925439d7fea0cbfb0d6384f948ac27",
+      "models/evaluator/evaluator.py": "9dc440af9f0e47e94046f3e4c373a619cf1e35942d6c4dffda6a194341c0cae3",
+      "models/evaluator/evaluator_models.py": "5bd9b1f6964d9ec5fe4d31f64f924dbe17b315008d996bc92080991ff7a10b34",
+      "utils/metrics.py": "9b6461032246313cbbf99c50d358812bd88b8b4333c858105039028a4a7b20d2",
+      "eval.py": "cd0ad08159dc2dc627c2ac32e09affcfb1b648df17e2a0904909e4c4c753bdb1"
+    }
+  },
+  "representation": {
+    "official_preprocessing_adapter": "dataset/interhuman_hhc_adapter.py",
+    "official_preprocessing_tests": "tests/test_interhuman_hhc_adapter.py",
+    "vq_window_dataset": "InterHumanVQWindowDataset: deterministic official-split order and eight paired HHC variants spanning the released loader's independent left/right augmentation, coordinate-anchor choice and final output-person order; official default window_size=64/window_stride=10, lazy hash-bound released preprocessing and bounded per-worker cache",
+    "implementation": "utils/interhuman_representation.py",
+    "tests": "tests/test_interhuman_representation.py",
+    "feature_order": {
+      "positions": "22 joints * 3 = dimensions 0:66",
+      "velocities": "22 joints * 3 = dimensions 66:132",
+      "rotations": "21 non-root joints * 6 = dimensions 132:258",
+      "foot_contact": "4 dimensions = 258:262"
+    },
+    "single_person_partition": [
+      {"name": "body", "dimension": 256},
+      {"name": "root", "dimension": 6}
+    ],
+    "paired_vq_channels_in_storage_order": [
+      {"name": "pair_body", "dimension": 512},
+      {"name": "pair_root", "dimension": 12}
+    ],
+    "cascade_channel_indices": [1, 0],
+    "cascade_order": "Root -> Body",
+    "partition_requirement": "For each person every one of 262 features belongs to exactly one channel; concatenated paired masks are also disjoint/exhaustive over all 524 features, so one HHC token pair jointly represents both people."
+  },
+  "forbidden_reuse": [
+    "Inter-X raw-12288 VQ checkpoint",
+    "Inter-X 672-dimensional Interx_Mean.npy or Interx_Std.npy",
+    "HumanML3D 263-dimensional feature masks",
+    "Inter-X SMPL-X 55-joint evaluator as an InterHuman headline evaluator"
+  ],
+  "vq_stage": {
+    "require_new_training": true,
+    "model_family": "two-channel separate-quantizer paired VQ over two official 262-dimensional InterHuman representations (524D total)",
+    "architecture_selection": "Run a bounded reconstruction pilot before freezing codebook and latent widths; do not assume that the Inter-X raw-12288 dimensions transfer unchanged.",
+    "preregistered_pilot": "configs/interhuman_vq_pilot_v1.json; official-scale 1024-code/512D/depth-2 starting point, 10k-step gate, online W&B, fixed official-val metrics, and no unregistered capacity sweep",
+    "training_entrypoint": "train/train_vq_interhuman.py; refuses launch without --confirm-after-interx, rejects preregistration drift or non-online W&B, uses exact step-resumable deterministic epoch batches and atomic full-state checkpoints including otherwise-unregistered EMA quantizer state and all RNG state",
+    "loss_reference": "/mnt/8T-HDD/wenning/InterMask/models/losses.py",
+    "loss_implementation": "utils/interhuman_vq_loss.py; each person's terms have term-by-term numerical parity with the hash-frozen released InterMask loss, paired training averages both people's geometric terms and counts the joint commitment term once",
+    "official_loss_terms": {
+      "reconstruction": "SmoothL1 over dimensions 0:258; foot-contact labels excluded",
+      "explicit_position": "SmoothL1 over dimensions 0:66",
+      "position_velocity": "temporal difference loss over dimensions 0:66",
+      "bone_length": "22-joint kinematic-chain bone lengths",
+      "rotation_geodesic": "6D rotations over dimensions 132:258",
+      "foot_sliding": "foot velocity on target-contact frames after denormalization"
+    },
+    "official_default_loss_weights_to_verify_in_pilot": {
+      "explicit_position": 1.0,
+      "position_velocity": 100.0,
+      "bone_length": 5.0,
+      "rotation_geodesic": 0.01,
+      "foot_sliding": 500.0
+    },
+    "released_intermask_reference_architecture": {
+      "codebook_size": 1024,
+      "code_dimension": 512,
+      "down_t": 2,
+      "stride_t": 2,
+      "width": 512,
+      "depth": 2,
+      "window_size": 64,
+      "window_stride": 10,
+      "optimizer": "AdamW lr=0.0002 weight_decay=0.0",
+      "training_epochs": 50
+    },
+    "acceptance_before_mgt": "Select by official InterHuman evaluator reconstruction FID, while reporting MPJPE and every loss component; reject a VQ with materially worse reconstruction than the official InterMask checkpoint under the same test loader.",
+    "validation_implementation": "utils/interhuman_vq_evaluation.py; groups samples by true length, pads only to the VQ temporal factor, excludes padded frames from MPJPE/MAE, preserves training RNG/model mode, and computes official val FID/R-Precision/Matching/Diversity on exactly five complete batches",
+    "official_intermask_vq_reference_exporter": "tools/export_official_intermask_interhuman_vq_reconstruction.py; strict original-source and best_fid.tar hashes, original 1024-code/512D/depth-2 architecture, true-length per-person reconstruction, frozen-request binding and non-overwriting LZF output"
+  },
+  "mgt_stage": {
+    "data_contract": "configs/interhuman_mgt_data_contract_v1.json; dataset/interhuman_mgt.py reproduces the official text loader's stochastic support, while frozen VQ encoding occurs online after crop/process/pad to preserve boundary-token numerics",
+    "initial_design": "historical high-performing HHC topology adapted only at token interfaces: hidden dimension 1024, 16 heads, 7 global plus 2 local base blocks, followed by 9 output blocks",
+    "shape_conditioning": false,
+    "contact_timing_conditioning": false,
+    "training_mask": "paper kinematic mask-ratio distribution with independent sorted tau values and historical pkeep=0.5 corruption",
+    "training_loss": "historical all-valid token cross entropy unless an InterHuman pilot demonstrates a reproducible regression",
+    "sampling": {
+      "function": "sample_intra_cas",
+      "outer_steps": 50,
+      "order": "Root -> Body -> Hands/arms with immediate within-iteration updates",
+      "temperature": 0.5,
+      "cfg_scale": 3.5
+    }
+  },
+  "evaluation": {
+    "primary": "official InterMask InterHuman evaluator and data loader",
+    "hash_bound_wrapper": "models/interhuman_evaluator_wrapper.py",
+    "wrapper_tests": "tests/test_interhuman_evaluator_wrapper.py",
+    "checkpoint": "/mnt/8T-HDD/wenning/InterMask/checkpoints/eval_model/interclip.ckpt",
+    "config": "/mnt/8T-HDD/wenning/InterMask/checkpoints/eval_model/eval_model.yaml",
+    "evaluator_input_dimensions": 258,
+    "foot_contact_dimensions_excluded_by_evaluator": 4,
+    "released_protocol": {
+      "batch_size": 96,
+      "drop_last": true,
+      "official_loader_eligible_test_entries": 1098,
+      "effective_main_samples_per_replication": 1056,
+      "replications": 20,
+      "multimodality_prompts": 100,
+      "multimodality_repeats_per_prompt": 30,
+      "multimodality_pairs": 10,
+      "diversity_pairs": 300,
+      "embedding_scale": 6,
+      "distance_divisor": 2
+    },
+    "metrics": ["FID", "R-Precision@1", "R-Precision@2", "R-Precision@3", "Matching", "Diversity", "MModality"],
+    "checkpoint_selection_requests": "output/interhuman_validation_requests/manifest.json; fixed official val split only, 547 eligible entries truncated by released batch_size=96/drop_last to 480; formal test requests are forbidden for model selection",
+    "fairness": "Freeze the same test requests, lengths, text, seeds, replication count, batch size and drop_last behavior for HHC and the external baseline result.",
+    "request_builder": "tools/build_interhuman_fair_requests.py; v3 includes released min_length=15, UTF-8 failure and caption-strip behavior, stores only replay choices and provenance, while GT is reconstructed on demand from official raw motion",
+    "frozen_request_manifest": "output/interhuman_fair_requests_v3/manifest.json",
+    "frozen_request_set_sha256": "3846b247ce917276b60db366eec9a4787ec859e53000b9b827e22524f2c36250",
+    "request_replay_dataset": "dataset/interhuman_fair_requests.py; v3 validates manifest/file/content/adapter hashes and yields official (name,text,motion1,motion2,length) batches in frozen order",
+    "generated_h5_contract": "dataset/interhuman_generated_h5.py; requires normalized float32 [1056,300,262] per person and exact frozen name/text/length/request/stat hashes",
+    "main_scorer": "tools/score_fair_interhuman_main.py; released InterCLIP and metric source, batch-local R-Precision, scale=6, divisor=2, 300-pair Diversity and full artifact provenance",
+    "mm_request_builder": "tools/build_interhuman_mm_requests.py; freezes 100 prompts from the full 1098-entry effective replication order, 30 repeats and 10 evaluator pairs",
+    "frozen_mm_request_manifest": "output/interhuman_fair_mm_requests/manifest.json",
+    "frozen_mm_request_set_sha256": "73bf3a1ba8fd47e73bff27e85a6fbd77345d40f44198808524836430bd57023b",
+    "mm_generated_h5_contract": "dataset/interhuman_generated_h5.py; normalized float32 [100,30,300,262] per person, exact name/text/length/request/stat binding, and SHA256-derived independent repeat seeds",
+    "mm_scorer": "tools/score_fair_interhuman_mm.py; released InterCLIP and official calculate_multimodality with 100 prompts, 30 repeats, 10 sampled pairs, scale=6 and divisor=2",
+    "formal_aggregator": "tools/aggregate_fair_interhuman_metrics.py; requires 20 main plus 20 MM replications, rehashes generation artifacts, verifies request and evaluator provenance, and enforces identical checkpoint/VQ/model-config/common50 identity across main, MM and replications before reporting mean and 95% CI"
+  },
+  "logging": {
+    "wandb_mode": "online",
+    "training": ["all loss components", "token accuracy per channel", "learning rate", "gradient norm", "weight norm", "codebook usage and perplexity for VQ"],
+    "validation": ["validation loss components", "FID", "R-Precision", "Matching", "Diversity", "diagnostic MModality"],
+    "checkpoint_selection": "held-out validation only; never select on test metrics"
+  },
+  "storage_safety": {
+    "delete_or_move_artifacts_while_user_unavailable": false,
+    "cleanup_ledger": "configs/deferred_cleanup_candidates.json"
+  }
+}

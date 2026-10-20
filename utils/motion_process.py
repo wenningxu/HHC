@@ -76,16 +76,33 @@ def recover_interx(data):
 
 
 class MotionNormalizerTorchInterX():
-    def __init__(self, motion_rep='vel'):
+    def __init__(self, motion_rep='vel', stats_dir=None, stats_prefix=None):
+        stats_dir = stats_dir or os.environ.get(
+            'HHC_INTERX_STATS_DIR', './dataset/interx'
+        )
+        stats_prefix = stats_prefix or os.environ.get(
+            'HHC_INTERX_STATS_PREFIX', 'Interx'
+        )
         if motion_rep == 'vel':
-            mean = np.load("./dataset/interx/Interx_Mean_root.npy")
-            std = np.load("./dataset/interx/Interx_Std_root.npy")
+            mean_path = os.path.join(stats_dir, f'{stats_prefix}_Mean_root.npy')
+            std_path = os.path.join(stats_dir, f'{stats_prefix}_Std_root.npy')
         else:
-            mean = np.load("./dataset/interx/Interx_Mean.npy")
-            std = np.load("./dataset/interx/Interx_Std.npy")
+            mean_path = os.path.join(stats_dir, f'{stats_prefix}_Mean.npy')
+            std_path = os.path.join(stats_dir, f'{stats_prefix}_Std.npy')
+
+        mean = np.load(mean_path)
+        std = np.load(std_path)
+        if mean.shape != (672,) or std.shape != (672,):
+            raise ValueError(
+                f'Inter-X normalization must be 672D: {mean_path}, {std_path}'
+            )
+        if not np.isfinite(mean).all() or not np.isfinite(std).all() or np.any(std <= 0):
+            raise ValueError('Inter-X normalization contains invalid values')
 
         self.motion_mean = torch.from_numpy(mean).float()
         self.motion_std = torch.from_numpy(std).float()
+        self.mean_path = os.path.abspath(mean_path)
+        self.std_path = os.path.abspath(std_path)
 
 
     def forward(self, x):

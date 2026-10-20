@@ -64,7 +64,10 @@ class BodyModel(nn.Module):
         self.num_dmpls = num_dmpls
         self.num_expressions = num_expressions
 
-        njoints = smpl_dict['posedirs'].shape[2] // 3
+        # NpzFile does not cache arrays: retain the two repeatedly used large arrays.
+        model_posedirs = smpl_dict['posedirs']
+        model_shapedirs = smpl_dict['shapedirs']
+        njoints = model_posedirs.shape[2] // 3
         self.model_type = {69: 'smpl', 153: 'smplh', 162: 'smplx', 45: 'mano', 105: 'animal_horse', 102: 'animal_dog', }[njoints]
 
         assert self.model_type in ['smpl', 'smplh', 'smplx', 'mano', 'mano', 'animal_horse', 'animal_dog'], ValueError(
@@ -85,21 +88,21 @@ class BodyModel(nn.Module):
 
         self.comp_register('f', torch.tensor(smpl_dict['f'].astype(np.int32), dtype=torch.int32), persistent=persistant_buffer)
 
-        num_total_betas = smpl_dict['shapedirs'].shape[-1]
+        num_total_betas = model_shapedirs.shape[-1]
         if num_betas < 1:
             num_betas = num_total_betas
 
-        shapedirs = smpl_dict['shapedirs'][:, :, :num_betas]
+        shapedirs = model_shapedirs[:, :, :num_betas]
         self.comp_register('shapedirs', torch.tensor(shapedirs, dtype=dtype), persistent=persistant_buffer)
 
         if self.model_type == 'smplx':
-            if smpl_dict['shapedirs'].shape[-1] > 300:
+            if model_shapedirs.shape[-1] > 300:
                 begin_shape_id = 300
             else:
                 begin_shape_id = 10
-                num_expressions = smpl_dict['shapedirs'].shape[-1] - 10
+                num_expressions = model_shapedirs.shape[-1] - 10
 
-            exprdirs = smpl_dict['shapedirs'][:, :, begin_shape_id:(begin_shape_id + num_expressions)]
+            exprdirs = model_shapedirs[:, :, begin_shape_id:(begin_shape_id + num_expressions)]
             self.comp_register('exprdirs', torch.tensor(exprdirs, dtype=dtype), persistent=persistant_buffer)
 
             expression = torch.tensor(np.zeros((1, num_expressions)), dtype=dtype)
@@ -116,7 +119,7 @@ class BodyModel(nn.Module):
 
         # Pose blend shape basis: 6890 x 3 x 207, reshaped to 6890*30 x 207
         if use_posedirs:
-            posedirs = smpl_dict['posedirs']
+            posedirs = model_posedirs
             posedirs = posedirs.reshape([posedirs.shape[0] * 3, -1]).T
             self.comp_register('posedirs', torch.tensor(posedirs, dtype=dtype), persistent=persistant_buffer)
         else:
@@ -130,6 +133,7 @@ class BodyModel(nn.Module):
         # weights = np.repeat(smpl_dict['weights'][np.newaxis], batch_size, axis=0)
         weights = smpl_dict['weights']
         self.comp_register('weights', torch.tensor(weights, dtype=dtype), persistent=persistant_buffer)
+        smpl_dict.close()
 
         self.comp_register('init_trans', torch.zeros((1,3), dtype=dtype), persistent=persistant_buffer)
         # self.register_parameter('trans', nn.Parameter(trans, requires_grad=True))

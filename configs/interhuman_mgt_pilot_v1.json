@@ -1,0 +1,105 @@
+{
+  "schema": "hhc_interhuman_mgt_pilot_v1",
+  "status": "preregistered_not_launched",
+  "launch_gate": {
+    "requires_interx_stages_complete": true,
+    "requires_selected_hhc_interhuman_vq": true,
+    "requires_completed_vq_online_wandb_audit": true,
+    "requires_explicit_flag": "--confirm-after-interx",
+    "reason": "Do not compete with the active Inter-X formal evaluation or train against an unaccepted tokenizer."
+  },
+  "data": {
+    "dataset": "official InterHuman train split only",
+    "eligible_identifiers": 5637,
+    "records_per_epoch": 11274,
+    "augmentation": "released original plus left/right swap; per-draw caption, exclusive crop, coordinate anchor and output order",
+    "online_tokenization": "process/crop/pad first, then encode with the frozen selected HHC InterHuman VQ",
+    "token_shape": [75, 2],
+    "valid_length": "floor(processed_length/4), maximum 74",
+    "validation": "frozen official-val-only 480 requests in five complete batches of 96",
+    "validation_multimodality": "100 prompts from the same seeded val-only order, 11 repeats and 10 official evaluator pairs; diagnostic only",
+    "test_selection_forbidden": true
+  },
+  "model": {
+    "codes_per_channel": 1024,
+    "storage_channels": ["body", "root"],
+    "sampling_cascade": ["root", "body"],
+    "embed_dim": 1024,
+    "attention_heads": 16,
+    "base_layers_total": 9,
+    "local_cross_attention_layers": 2,
+    "global_base_layers": 7,
+    "output_head_layers": 9,
+    "block_size": 75,
+    "dropout": 0.1,
+    "feedforward_rate": 4,
+    "paper_architecture": false,
+    "conditioning_contract_train": "historical_mmm_shape_dropout",
+    "conditioning_contract_inference": "paper_text_cfg",
+    "shape_conditioning": false,
+    "contact_conditioning": false,
+    "rationale": "Reuse the recovered high-performing HHC topology and change dataset/sequence support only; InterHuman supplies neither beta/gender nor Inter-X contact schedules."
+  },
+  "training": {
+    "mask_contract": "historical_pipeline_paper_kinematic_ratio",
+    "mask_detail": "retain pkeep=0.5 random replacement, change only to two sorted cosine kinematic ratios",
+    "loss_contract": "historical_all_valid",
+    "historical_tail_contract": "explicit END at floor(length/4), PAD afterward; neither is included in loss",
+    "optimizer": "AdamW",
+    "learning_rate": 0.0002,
+    "betas": [0.5, 0.9],
+    "weight_decay": 0.000001,
+    "scheduler": "MultiStepLR",
+    "scheduler_milestones": [150000],
+    "scheduler_gamma": 0.05,
+    "micro_batch_pairs": 64,
+    "gradient_accumulation": 1,
+    "effective_batch_pairs": 64,
+    "batch_rationale": "Prelaunch 2026-10-01 resource check with selected frozen VQ, cached CLIP/InterCLIP and FP32 Adam moments: repeated real 8-sample data, physical64 forward/backward 0.2183s and 14.713GiB reserved versus 8x8 accumulation 0.2625s/6.297GiB. Keep effective batch64; this is not a quality or bitwise-gradient equivalence claim. No earlier MGT run was trained with the provisional 8x8 setting.",
+    "gradient_clip_norm": 1.0,
+    "precision": "bf16",
+    "seed": 114514,
+    "full_optimizer_steps": 300000,
+    "pilot_decision_step": 50000,
+    "checkpoint_interval_optimizer_steps": 1000,
+    "exact_resume": "resume only after complete optimizer steps with sampler draw position, optimizer/scheduler, RNG and W&B run id restored"
+  },
+  "automatic_validation": {
+    "interval_optimizer_steps": 10000,
+    "sampler": "sample_intra_cas",
+    "outer_maskgit_steps": 50,
+    "temperature": 0.5,
+    "cfg_scale": 3.5,
+    "length_bridge": "4*floor(processed_length/4)",
+    "multimodality_seed_contract": "SHA256-derived seed per frozen prompt and repeat; sample output is invariant to generation batch grouping",
+    "main_validation_seed_contract": "SHA256-derived repeat-0 seed per frozen official-val request; checkpoint-selection output is invariant to generation batch grouping",
+    "main_metrics": ["validation loss", "valid/masked/per-channel accuracy", "FID", "Matching", "R-Precision top1/top2/top3", "Diversity", "MModality diagnostic"],
+    "checkpoint_selection": "lowest frozen official-val FID only",
+    "rng_contract": "validation is observational and restores Python, NumPy, Torch CPU and CUDA RNG state"
+  },
+  "observability": {
+    "wandb_mode": "online",
+    "wandb_project": "NewInter",
+    "required_train_metrics": [
+      "train/loss", "train/accuracy_valid", "train/accuracy_masked",
+      "train/accuracy_body", "train/accuracy_root",
+      "train/masked_fraction", "train/learning_rate", "train/optimizer_step"
+    ],
+    "required_process_metrics": [
+      "gradient_l2_norm", "gradient_l2_norm_post_clip", "weight_l2_norm",
+      "gradient_clip_hit_rate", "samples_per_second", "GPU_memory_GiB"
+    ],
+    "required_validation_metrics": [
+      "val/objective_loss", "val/objective_accuracy_valid",
+      "val/objective_accuracy_masked", "val/objective_accuracy_body",
+      "val/objective_accuracy_root",
+      "val/fid", "val/matching", "val/top1", "val/top2", "val/top3",
+      "val/diversity", "val/multimodality"
+    ]
+  },
+  "pilot_decision": {
+    "continue_same_run": "validation FID/retrieval improve and training/gradient telemetry remain healthy; continue without reinitialization toward 300k",
+    "diagnose_before_continue": "flat or regressing official-val quality, non-finite metrics, collapsed channel accuracy, or unstable gradient/weight norms",
+    "never_select_on": "formal test replications"
+  }
+}

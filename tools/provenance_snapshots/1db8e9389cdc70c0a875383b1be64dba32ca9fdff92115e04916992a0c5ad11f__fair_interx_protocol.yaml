@@ -1,0 +1,92 @@
+protocol: interx_official_v1
+dataset:
+  source: dataset/interx
+  train_split: dataset/interx/splits/train.txt
+  val_split: dataset/interx/splits/val.txt
+  test_split: dataset/interx/splits/test.txt
+  test_split_entries: 1708
+  valid_test_entries: 1706
+  max_motion_length: 150
+  fps: 30
+evaluation:
+  evaluator_options: checkpoints/hhi/Comp_v6_KLD01/opt.txt
+  evaluator_weights: checkpoints/hhi/text_mot_match/model/finest.tar
+  batch_size: 32
+  drop_last: true
+  samples_per_replication: 1696
+  replications: 20
+  diversity_pairs: 300
+  multimodality_prompts: 100
+  multimodality_generations_per_prompt: 30
+  multimodality_pairs: 10
+  base_seed: 1234
+  frozen_request_fields: [sample_id, caption, length, text_embedding, gt_embedding, betas, gender, contact]
+metrics:
+  semantic: [FID, Diversity, R_precision_top1, R_precision_top2, R_precision_top3, Matching]
+  body_controlled: [FID_body_controlled, Diversity_body_controlled]
+  multimodality: [MModality]
+  physical: [contact_chamfer, contact_success, penetration_depth, penetration_volume, foot_sliding]
+physical_joint_protocol:
+  replication: 0
+  source: frozen_binary_contact_schedule
+  skeleton: subject_specific_interx
+  llm_in_metric: false
+  contact_thresholds_m: [0.05, 0.10, 0.15]
+  primary_contact_threshold_m: 0.10
+  ground_height_threshold_m: 0.05
+  fps: 30
+  metrics: [contact_distance, contact_precision, contact_recall, contact_f1, contact_temporal_iou, false_contact_rate, foot_sliding]
+sampling:
+  hhc:
+    mmm_history_repository: /home/wenning/projects/MMM
+    mmm_pre_cleanup_baseline_commit: 75814e57e0702789176da6713056a15ed4a192e2
+    mmm_cleanup_first_commit: 0f58ffbb9db95a5d9ddc7f2e8a40b8602c17a325
+    mmm_history_evidence_priority: [historical_runtime_logs, pre_cleanup_git_tree, cleaned_main]
+    mmm_historical_runtime_sampler: sample_intra_cas
+    sampler: sample_intra_cas
+    cascade: [root, body, hands]
+    active_sampler_semantics: paper_high_confidence_tokens_fixed
+    maskgit_steps: 50
+    sampling_steps_unit: outer_maskgit_iterations
+    channel_updates_per_outer_step: 3
+    model_forward_calls_per_outer_step_with_cfg: 6
+    common50_channel_updates: 150
+    common50_model_forward_calls_with_cfg: 300
+    mmm_pre_cleanup_snapshot_cascade_outer_steps_audit: 3
+    mmm_pre_cleanup_snapshot_cascade_forward_passes_without_cfg: 9
+    mmm_pre_cleanup_snapshot_parallel_steps_audit: 10
+    mmm_pre_cleanup_snapshot_audit_scope: function_default_parameters_only_not_historical_runtime
+    mmm_pre_cleanup_source_contact_guidance: linear_decay_with_0.2_gate
+    mmm_pre_cleanup_source_token_update: overwrites_previous_fixed_tokens
+    mmm_historical_runtime_minimum_sampling_updates_user_recorded: 30
+    mmm_historical_runtime_exact_step_count_status: pending_backup_reconstruction
+    paper_figure_step_label_audit: 10
+    temperature: 0.5
+    cfg_scale: 3.5
+    contact_guidance_scale: 1.0
+    contact_map_estimation_split: train
+  intermask:
+    sampling_steps: 50
+    author_native_steps_audit: 20
+    cfg_scale: 2.0
+    topk_filter_threshold: 0.9
+    temperature: 1.0
+    length_policy: exact
+    native_length_audit: author-floor
+  coshmdm:
+    strategy: ddim50
+    cfg_scale: 3.5
+    training_epochs: 2000
+    effective_batch_size: 64
+    physical_batch_size: 32
+    gradient_accumulation: 2
+    precision: fp32
+    float32_matmul_precision: medium_tf32_eligible
+    missing_hand_policy: identity_on_valid_frames
+    report_full_body_fid: true
+    report_body_controlled_fid: true
+sources:
+  interx_repo: https://github.com/liangxuy/Inter-X
+  intermask_repo: https://github.com/gohar-malik/intermask
+  coshmdm_repo: https://github.com/AliManjotho/coshmdm-code.git
+  coshmdm_commit: c5116ab3bead55051ffec2ec9a161a38d2ab5116

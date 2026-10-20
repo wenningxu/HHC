@@ -1,0 +1,36 @@
+{
+  "schema": "hhc_interx_grounded_chain_preservation_pilot_v1",
+  "status": "preregistered_before_candidate_execution",
+  "scientific_label": "local-refinement variable-setting stabilization; not the released all-variable optimizer",
+  "trigger": "ground-corrected metric-aligned smoke reduced penetration but increased foot sliding from 0.0028626729 to 0.0085135957 m/frame",
+  "diagnosis": {
+    "sample": "G005T003A016R004__shapeaug_s00000123",
+    "optimized_foot_sliding_p1_p2": [0.0083823418, 0.0086119305],
+    "optimized_pose_with_random_root_translation_p1_p2": [0.0069927708, 0.0072376453],
+    "preserve_root_orientation_leg_chains_and_constant_root_translation_p1_p2": [0.0029102981, 0.0030318790],
+    "interpretation": "most regression is introduced by changing root orientation and the pelvis-to-foot chains; per-frame root translation is a smaller additional source"
+  },
+  "candidate": {
+    "optimization_variable_policy": "grounded_chain_constant_root",
+    "preserve_root_orientation": true,
+    "preserve_smplx_joint_indices": [0, 1, 2, 4, 5, 7, 8, 10, 11],
+    "root_translation": "one constant xyz delta per person over the sequence",
+    "unchanged": [
+      "paired sample and random shape donor",
+      "manual contact timing",
+      "Luna contact regions",
+      "100 iterations and LR 0.02",
+      "50/50 coarse/fine stages",
+      "VolumetricSMPL flat-hand geometry",
+      "MMM per-person ground alignment restored to raw coordinates",
+      "loss weights",
+      "physical scoring and unchanged paired gate"
+    ]
+  },
+  "promotion_gate": {
+    "first_stage": "one identical-sample constant-root smoke must have finite output, exact variable invariants, non-increasing foot sliding, and lower Eq.6 penetration than random shape",
+    "strict_numerical_fallback": "if a constant root shift preserves physical foot velocity but fails the unchanged zero-delta gate only through floating-point translation rounding, fix the complete root translation instead of changing the gate; this fallback is frozen before its first execution",
+    "second_stage": "five paired timing-positive samples under the frozen selection seed must satisfy non-positive mean foot-sliding delta and non-positive mean Eq.6 penetration delta",
+    "full_stage": "the existing 25-pair unchanged bootstrap physical gate must pass before full augmentation"
+  }
+}

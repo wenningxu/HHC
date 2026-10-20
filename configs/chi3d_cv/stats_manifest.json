@@ -1,0 +1,93 @@
+{
+  "feature_conversion_reference_check": {
+    "existing_mean_sha256": "68f218aaac8fe026696f6a97a8d5523d867bec78331e44d27ec422efde560307",
+    "existing_std_sha256": "23697456002d3412ff6b055fea84a22da1de670b74187fd2e8175bacd0a8696e",
+    "feature_dimensions": 672,
+    "frames": 64685,
+    "mean_max_absolute_error": 5.960464477539063e-08,
+    "sequences": 373,
+    "status": "pass",
+    "std_max_absolute_error": 2.9802322387695312e-08,
+    "zero_variance_dimensions_pinned_to_one": 42
+  },
+  "folds": {
+    "G2": {
+      "feature_dimensions": 672,
+      "frames": 39653,
+      "mean": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g2/stats/Chi3D_Mean_root.npy",
+        "sha256": "a58c91fde3f2b2fa7a8ebf1ec1e3febdf8a786016ab229828cb192fd7912ce51",
+        "shape": [
+          672
+        ]
+      },
+      "sequences": 223,
+      "std": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g2/stats/Chi3D_Std_root.npy",
+        "sha256": "f55ebf775bc42346b9af5c9d6e2268f216f8410e9c213c9f24254411c370a8f9",
+        "shape": [
+          672
+        ]
+      },
+      "train_split_sha256": "ee7aaef3d1d6b6b472bb46c7a3ddd0a8c121e37515da372295d349dd419b1ff2",
+      "zero_variance_dimensions_pinned_to_one": 42
+    },
+    "G3": {
+      "feature_dimensions": 672,
+      "frames": 34687,
+      "mean": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g3/stats/Chi3D_Mean_root.npy",
+        "sha256": "daab030c336e6104c073f77aa5b02db5a09f46fbd9a01abd50b284f230c3bf09",
+        "shape": [
+          672
+        ]
+      },
+      "sequences": 217,
+      "std": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g3/stats/Chi3D_Std_root.npy",
+        "sha256": "3b7ac2aa33e05049fccf6e0dc763595adb045aa513562254f3ada4b9660d8f89",
+        "shape": [
+          672
+        ]
+      },
+      "train_split_sha256": "eef91c4ff5577c49b73f205c9e663bb5c081f6197e4ea1b75444d5616c991a95",
+      "zero_variance_dimensions_pinned_to_one": 42
+    },
+    "G4": {
+      "feature_dimensions": 672,
+      "frames": 39563,
+      "mean": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g4/stats/Chi3D_Mean_root.npy",
+        "sha256": "0d05bd652076ef887ee26aecf0d8a64581608464696994d6361da889dde23590",
+        "shape": [
+          672
+        ]
+      },
+      "sequences": 216,
+      "std": {
+        "dtype": "float32",
+        "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/heldout_g4/stats/Chi3D_Std_root.npy",
+        "sha256": "4bddd6bd21ec6788cd736d8e6dff966f3c4ff1377c8ef6a411f809a9831d00f8",
+        "shape": [
+          672
+        ]
+      },
+      "train_split_sha256": "dd955cfa15cd377223a65278b41ddb3fa4d8149fa9d22ac51e7e8f594570f699",
+      "zero_variance_dimensions_pinned_to_one": 42
+    }
+  },
+  "motion_file": {
+    "path": "/home/wenning/projects/MMM/dataset/chi3d/motions/chi3d-shape.h5",
+    "sha256": "bb6821c1df396f065280f8fe8708610fbf98824532f5b079f9bd44134502990a"
+  },
+  "split_manifest": {
+    "path": "/mnt/8T-HDD/wenning/HHC/configs/chi3d_cv/manifest.json",
+    "sha256": "d274e46e1950d0f1e9d431aca74699d46d0af5eda5da9b2760dc65893672fa91"
+  },
+  "status": "pass"
+}

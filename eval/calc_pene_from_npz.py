@@ -144,7 +144,7 @@ class PeneCalculator:
             return self.female_bm
         return self.neutral_bm
 
-    def _compute_geometry(self, params):
+    def _compute_geometry(self, params, *, compute_normals=True):
         body_pose = params["pose_body"]
         left_hand_pose = params["pose_lhand"]
         right_hand_pose = params["pose_rhand"]
@@ -169,7 +169,7 @@ class PeneCalculator:
 
         verts = body.v
         joints = body.Jtr
-        normals = vertex_normals(verts, bm.f)
+        normals = vertex_normals(verts, bm.f) if compute_normals else None
         return verts, joints, normals
 
     def _calc_penetration_metric_per_frame(self, verts_a, verts_b, norms_a, norms_b, temporal_mask=None, ratio=1.0):

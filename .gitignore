@@ -49,3 +49,15 @@ generate/gen_results_ground/
 # Keep IDE project files visible to git status by request:
 # .idea/
 # .vscode/
+
+# Runtime assets and migration receipts are transferred server-to-server, not Git.
+*.ckpt
+*.pt
+*.pth
+*.safetensors
+*.partial
+*.parts/
+runtime_assets/
+migration/
+third_party/
+dataset/interhuman_official/

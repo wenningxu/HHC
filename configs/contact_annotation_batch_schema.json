@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["records"],
+  "properties": {
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sample_name", "contacts"],
+        "properties": {
+          "sample_name": {"type": "string"},
+          "contacts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "p1_part",
+                "p2_part",
+                "contact_type",
+                "role_ratio"
+              ],
+              "properties": {
+                "p1_part": {"$ref": "#/$defs/body_part"},
+                "p2_part": {"$ref": "#/$defs/body_part"},
+                "contact_type": {
+                  "type": "string",
+                  "enum": ["point", "flat", "wrap", "hug"]
+                },
+                "role_ratio": {
+                  "type": "string",
+                  "enum": ["5:5", "9:1", "1:9", "7:3"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "body_part": {
+      "type": "string",
+      "enum": [
+        "left hand (palm)",
+        "left hand (back)",
+        "right hand (palm)",
+        "right hand (back)",
+        "left arm",
+        "right arm",
+        "left foot",
+        "right foot",
+        "left leg",
+        "right leg",
+        "back",
+        "head",
+        "neck",
+        "butt",
+        "waist",
+        "waist (back)",
+        "waist (front)",
+        "left shoulder (front)",
+        "left shoulder (back)",
+        "right shoulder (front)",
+        "right shoulder (back)",
+        "left shoulder",
+        "right shoulder",
+        "chest",
+        "stomach",
+        "left hand (palm), right hand (palm)",
+        "left hand (back), right hand (back)",
+        "left arm, right arm",
+        "left foot, right foot",
+        "left leg, right leg",
+        "left shoulder, right shoulder",
+        "left shoulder (front), right shoulder (front)",
+        "left shoulder (back), right shoulder (back)"
+      ]
+    }
+  }
+}

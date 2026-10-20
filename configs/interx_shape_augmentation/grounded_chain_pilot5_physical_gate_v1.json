@@ -1,0 +1,19 @@
+{
+  "schema": "hhc_interx_shape_augmentation_pilot_physical_gate_v1",
+  "status": "active",
+  "stage": "preregistered_grounded_chain_fixed_root_five_pair_gate",
+  "comparison_schema": "hhc_paired_physical_comparison_v1",
+  "expected_sample_count": 5,
+  "criteria": {
+    "paper_eq6_squared_sum_m2_per_frame": {
+      "maximum_mean_delta": 0.0
+    },
+    "penetrating_vertex_fraction": {
+      "maximum_mean_delta": 0.0
+    },
+    "mean_foot_sliding_m_per_frame": {
+      "maximum_mean_delta": 0.0
+    }
+  },
+  "decision": "only a pass permits the unchanged 25-pair gate; it never authorizes full augmentation directly"
+}

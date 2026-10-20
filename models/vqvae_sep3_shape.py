@@ -4,7 +4,6 @@ from models.encdec import Encoder, Decoder
 from models.quantize_cnn import QuantizeEMAReset
 from utils.motion_masks import HML_UPPER_BODY_MASK, HML_LOWER_BODY_MASK, HHI_BODY_MASK, HHI_HAND_MASK, HHI_ROOT_MASK, HHI_ROOT_MASK_OLD
 from utils.fk import FK_Pair_Layer_Batch
-from utils.paramUtil import SMPLX_TREE, INTERX_SKELETONS
 
 class VQVAE_SEP3_shape(nn.Module):
     def __init__(self,
@@ -44,6 +43,7 @@ class VQVAE_SEP3_shape(nn.Module):
             self.upper_mask = HML_UPPER_BODY_MASK
             self.lower_mask = HML_LOWER_BODY_MASK
         self.code_dim = code_dim
+        self.temporal_stride = stride_t ** down_t
 
         gender_emb_dim = 4
         shape_emb_dim = 40
@@ -51,10 +51,17 @@ class VQVAE_SEP3_shape(nn.Module):
         self.shape_projection = nn.Linear(20, shape_emb_dim)  # 10是你的体型向量维度
         # 3. 深度融合分支 (MLP)
         combined_input_dim = 2 * gender_emb_dim + shape_emb_dim
+        # Older, lower-dimensional VQ runs used an 8-D shape condition rather
+        # than scaling it as code_dim/32.  Keep the current default while
+        # allowing exact checkpoint reconstruction when the dimension is
+        # recorded or inferred from its tensors.
+        self.shape_condition_dim = int(
+            getattr(args, 'shape_condition_dim', int(code_dim / 32))
+        )
         self.condition_mlp = nn.Sequential(
             nn.Linear(combined_input_dim, 64),
             nn.ReLU(),
-            nn.Linear(64, int(code_dim/32))
+            nn.Linear(64, self.shape_condition_dim)
         )
         self.dropout = nn.Dropout(0.1)
 
@@ -66,7 +73,7 @@ class VQVAE_SEP3_shape(nn.Module):
                                          dilation_growth_rate, activation=activation, norm=norm)
         else:
 
-            self.decoder = Decoder(output_dim, code_dim+int(code_dim/32), down_t, stride_t, width, depth, dilation_growth_rate,
+            self.decoder = Decoder(output_dim, code_dim+self.shape_condition_dim, down_t, stride_t, width, depth, dilation_growth_rate,
                                    activation=activation, norm=norm)
 
         self.num_code = nb_code
@@ -84,7 +91,12 @@ class VQVAE_SEP3_shape(nn.Module):
         self.quantizer_lower = QuantizeEMAReset(nb_code, int(code_dim * 3 / 8), args)
         self.quantizer_root = QuantizeEMAReset(nb_code, int(code_dim / 4), args)
 
-        self.shape_mask_prob = 0.1
+        self.shape_mask_prob = float(getattr(args, 'shape_mask_prob', 0.1))
+        if not 0.0 <= self.shape_mask_prob <= 1.0:
+            raise ValueError('shape_mask_prob must be in [0, 1]')
+        # Only the original 55-joint Inter-X model needs these assets.
+        # The native SMPL model reuses mask_shape without constructing this class.
+        from utils.paramUtil import SMPLX_TREE, INTERX_SKELETONS
         interx_skeleton = torch.from_numpy(INTERX_SKELETONS)
         self.fk_layers = FK_Pair_Layer_Batch(
             SMPLX_TREE,
@@ -235,7 +247,7 @@ class VQVAE_SEP3_shape(nn.Module):
 
     def merge_body_hand(self, body, hand, root):
 
-        motion = torch.zeros(*body.shape[:2], 56 * 12).to(body.device)
+        motion = body.new_zeros(*body.shape[:2], 56 * 12)
         motion[..., self.upper_mask] = body
         motion[..., self.lower_mask] = hand
         motion[..., self.root_mask] = root
@@ -250,4 +262,3 @@ class VQVAE_SEP3_shape(nn.Module):
         # (bs, Jx3, T) ->  (bs, T, Jx3)
         x = x.permute(0, 2, 1)
         return x
-

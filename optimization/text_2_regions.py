@@ -1,4 +1,6 @@
 import os
+import hashlib
+import time
 
 # google-genai is only needed when ContactExtractor actually talks to the
 # Gemini API for live contact-region extraction. Import lazily inside __init__
@@ -10,7 +12,16 @@ types = None
 
 
 class ContactExtractor:
-    def __init__(self, api_key, model_name="gemini-3-flash-preview"):
+    ALLOWED_CONTACT_TYPES = {'point', 'flat', 'wrap', 'hug'}
+    ALLOWED_ROLE_RATIOS = {'5:5', '9:1', '1:9', '7:3'}
+
+    def __init__(
+        self,
+        api_key,
+        model_name="gemini-3-flash-preview",
+        max_retries=0,
+        retry_delay_seconds=2.0,
+    ):
         """
         初始化 Gemini 客户端
         """
@@ -21,6 +32,11 @@ class ContactExtractor:
         types = _types
         self.client = _genai.Client(api_key=api_key)
         self.model_name = model_name
+        self.max_retries = int(max_retries)
+        self.retry_delay_seconds = float(retry_delay_seconds)
+        if self.max_retries < 0 or self.retry_delay_seconds < 0:
+            raise ValueError('retry settings must be non-negative')
+        self.last_metadata = None
 
 
         # ======================================================
@@ -33,8 +49,7 @@ Given a description of Person 1 and Person 2 who are physically in contact with 
 1. **Person 1 Body Part**
 2. **Person 2 Body Part**
 3. **Contact Area** (Size of the contact region)
-4. **Normal Alignment** (How strictly the surface normals should align)
-5. **Role Ratio (P1:P2)** (New Column!)
+4. **Role Ratio (P1:P2)**
 
 ### 1. ALLOWED BODY PARTS
 You strictly limit your output to the exact strings listed below. Do not use any other words.
@@ -58,7 +73,7 @@ If the description mentions a specific part (e.g., "calf"), map it to the corres
 "right shoulder", "right shoulder (front)", "right shoulder (back)"
 
 ### 2. ALLOWED CONTACT ATTRIBUTES
-For the "Contact Area" and "Normal Alignment" columns, you must use ONLY the specific values defined below based on the physics of the interaction.
+For the "Contact Area" column, you must use ONLY the specific values defined below based on the physics of the interaction.
 
 **Column: Contact Area**
 Choose one based on the size/nature of the contact:
@@ -119,7 +134,10 @@ Write the Markdown table.
             # 提取表头
             if not headers:
                 # 转小写方便后续处理 (e.g., "Contact Area" -> "contact area")
-                headers = [h.lower() for h in cells]
+                headers = [
+                    h.lower().replace('**', '').strip().strip('`')
+                    for h in cells
+                ]
                 in_table = True
                 continue
 
@@ -130,6 +148,17 @@ Write the Markdown table.
                     row_dict[header] = cells[i]
                 data.append(row_dict)
 
+        required_headers = {
+            'person 1 body part', 'person 2 body part',
+            'contact area', 'role ratio (p1:p2)',
+        }
+        if not headers:
+            raise ValueError('LLM response does not contain a Markdown table')
+        if set(headers) != required_headers:
+            raise ValueError(
+                'LLM table columns do not match the paper schema: '
+                f'{headers}'
+            )
         return data
 
     def map_contacts_to_ids(self, contacts, candidates_dict):
@@ -146,28 +175,36 @@ Write the Markdown table.
         mapped_results = []
 
         for item in contacts:
+            required_headers = {
+                'person 1 body part', 'person 2 body part',
+                'contact area', 'role ratio (p1:p2)',
+            }
+            missing_headers = sorted(required_headers - set(item))
+            if missing_headers:
+                raise ValueError(
+                    f'LLM table is missing required columns: {missing_headers}'
+                )
+            unexpected_headers = sorted(set(item) - required_headers)
+            if unexpected_headers:
+                raise ValueError(
+                    f'LLM table has unexpected columns: {unexpected_headers}'
+                )
             # 1. 获取身体部位 (Key)
             p1_key = item.get('person 1 body part', '').lower().strip()
             p2_key = item.get('person 2 body part', '').lower().strip()
 
-            # 2. 获取接触属性 (新增部分)
-            # 对应 Prompt 中的 "Contact Area" 列 -> 映射为 contact_type (point, flat, wrap, hug)
-            c_area = item.get('contact area', 'flat').lower().strip()
-            # 对应 Prompt 中的 "Normal Alignment" 列 -> 映射为 align_type (strict, adaptive, none)
-            c_align = item.get('normal alignment', 'strict').lower().strip()
+            c_area = item['contact area'].lower().strip().strip('`')
+            if c_area not in self.ALLOWED_CONTACT_TYPES:
+                raise ValueError(f'invalid Contact Area value: {c_area!r}')
+            # Normal alignment is not a column in the paper prompt or objective.
+            # Keep a fixed internal value for backwards-compatible data objects.
+            c_align = 'strict'
 
-            raw_ratio = item.get('role ratio (p1:p2)', '5:5').strip()  # 获取字符串
-
-            try:
-                # 解析 "9:1" -> [9.0, 1.0]
-                parts = raw_ratio.split(':')
-                if len(parts) == 2:
-                    w1 = float(parts[0])
-                    w2 = float(parts[1])
-                else:
-                    w1, w2 = 5.0, 5.0
-            except:
-                w1, w2 = 5.0, 5.0
+            raw_ratio = item['role ratio (p1:p2)'].strip().replace(' ', '')
+            if raw_ratio not in self.ALLOWED_ROLE_RATIOS:
+                raise ValueError(f'invalid Role Ratio value: {raw_ratio!r}')
+            parts = raw_ratio.split(':')
+            w1, w2 = float(parts[0]), float(parts[1])
 
             # 归一化，防止总 Loss 变大
             total_w = w1 + w2 + 1e-6
@@ -180,23 +217,31 @@ Write the Markdown table.
 
             p1_ids = []
             p2_ids = []
+            unknown_parts = []
 
             # 4. 查找 ID
             for k in p1_keys:
                 if k in candidates_dict:
                     p1_ids.extend(candidates_dict[k])
                 else:
-                    print(f"[Warning] Key '{k}' not found in CANDIDATES for Person 1")
+                    unknown_parts.append(f'person1:{k}')
 
             for k in p2_keys:
                 if k in candidates_dict:
                     p2_ids.extend(candidates_dict[k])
                 else:
-                    print(f"[Warning] Key '{k}' not found in CANDIDATES for Person 2")
+                    unknown_parts.append(f'person2:{k}')
+
+            if unknown_parts:
+                raise ValueError(
+                    'body parts outside the paper dictionary: '
+                    + ', '.join(unknown_parts)
+                )
 
             # 5. 构建结果
-            if p1_ids and p2_ids:
-                mapped_results.append({
+            if not p1_ids or not p2_ids:
+                raise ValueError('contact row maps to an empty body region')
+            mapped_results.append({
                     'p1_part': p1_key,
                     'p1_ids': sorted(list(set(p1_ids))),  # 去重
                     'p2_part': p2_key,
@@ -207,38 +252,101 @@ Write the Markdown table.
                     'align_type': c_align,  # 用于决定 alignment weight
                     'w_p1': w_p1,  # [新增] P1 主动性权重
                     'w_p2': w_p2  # [新增] P2 主动性权重
-                })
+            })
 
         return mapped_results
 
+    @property
+    def prompt_sha256(self):
+        return hashlib.sha256(
+            self.system_instruction.encode('utf-8')
+        ).hexdigest()
+
+    @staticmethod
+    def _usage_record(response):
+        usage = getattr(response, 'usage_metadata', None)
+        if usage is None:
+            return None
+        if hasattr(usage, 'to_json_dict'):
+            return usage.to_json_dict()
+        result = {}
+        for key in (
+            'prompt_token_count', 'candidates_token_count',
+            'total_token_count', 'thoughts_token_count',
+        ):
+            value = getattr(usage, key, None)
+            if value is not None:
+                result[key] = int(value)
+        return result
+
+    def get_contacts_with_metadata(self, description, candidates_dict):
+        """Return strict structured contacts plus complete extraction metadata."""
+        started = time.perf_counter()
+        metadata = {
+            'caption': description,
+            'requested_model': self.model_name,
+            'prompt_sha256': self.prompt_sha256,
+            'system_instruction': self.system_instruction,
+            'max_retries': self.max_retries,
+            'retry_delay_seconds': self.retry_delay_seconds,
+            'attempts': 0,
+            'status': 'not_started',
+            'raw_response': None,
+            'response_model_version': None,
+            'usage_metadata': None,
+            'error_type': None,
+            'error_message': None,
+        }
+        for attempt in range(self.max_retries + 1):
+            metadata['attempts'] = attempt + 1
+            response = None
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    config=types.GenerateContentConfig(
+                        system_instruction=self.system_instruction
+                    ),
+                    contents=description,
+                )
+                metadata['raw_response'] = response.text
+                metadata['response_model_version'] = getattr(
+                    response, 'model_version', None
+                )
+                metadata['usage_metadata'] = self._usage_record(response)
+                raw_contacts = self._parse_markdown_table(response.text)
+                structured_contacts = self.map_contacts_to_ids(
+                    raw_contacts, candidates_dict
+                )
+                metadata['raw_contact_rows'] = len(raw_contacts)
+                metadata['structured_contact_rows'] = len(structured_contacts)
+                metadata['status'] = 'success'
+                metadata['elapsed_seconds'] = time.perf_counter() - started
+                self.last_metadata = metadata
+                return structured_contacts, metadata
+            except Exception as error:
+                metadata['status'] = (
+                    'api_error' if response is None else 'parse_or_schema_error'
+                )
+                metadata['error_type'] = type(error).__name__
+                metadata['error_message'] = str(error)
+                if attempt < self.max_retries:
+                    time.sleep(self.retry_delay_seconds)
+
+        metadata['elapsed_seconds'] = time.perf_counter() - started
+        self.last_metadata = metadata
+        return [], metadata
+
     def get_contacts(self, description, candidates_dict):
-        """
-        主函数：传入描述，返回解析后的接触列表
-        Args:
-            description: 文本描述
-            candidates_dict: 你的 region mapping 字典
-        """
-        try:
-            # 1. 调用 LLM
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                config=types.GenerateContentConfig(
-                    system_instruction=self.system_instruction),
-                contents=description
+        """Compatibility wrapper; inspect ``last_metadata`` before optimization."""
+        contacts, metadata = self.get_contacts_with_metadata(
+            description, candidates_dict
+        )
+        if metadata['status'] != 'success':
+            print(
+                'Error calling Gemini or parsing strict contact schema: '
+                f'{metadata["error_type"]}: {metadata["error_message"]}'
             )
-
-            # 2. 解析 Markdown 表格
-            raw_contacts = self._parse_markdown_table(response.text)
-
-            # 3. 映射 ID 和属性
-            structured_contacts = self.map_contacts_to_ids(raw_contacts, candidates_dict)
-
-            return structured_contacts
-
-        except Exception as e:
-            print(f"Error calling Gemini or Parsing: {e}")
-            # 出错时返回空列表，避免程序崩溃
-            return []
+        return contacts
 
 
 # ==========================================
@@ -246,11 +354,12 @@ Write the Markdown table.
 # ==========================================
 
 if __name__ == "__main__":
-    # 请填入你的 API Key
-    MY_API_KEY = "AIzaSyBasqVApLHbY8tRevAnU9EnraMJvpBuW0s"
+    api_key = os.environ.get('GEMINI_API_KEY')
+    if not api_key:
+        raise ValueError('set GEMINI_API_KEY before running the live LLM example')
 
     # 1. 实例化
-    extractor = ContactExtractor(api_key=MY_API_KEY)
+    extractor = ContactExtractor(api_key=api_key)
 
     CANDIDATES = {
         'left hand (palm)': [17, 33],

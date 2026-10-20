@@ -1,0 +1,45 @@
+{
+  "schema": "hhc_interact2ar_joint_paper_acceptance_v2",
+  "status": "active",
+  "replaces": "internal no-GT-first-frame reproduction numbers previously used as thresholds",
+  "source": {
+    "paper": "Interact2Ar: Full-Body Human-Human Interaction Generation via Autoregressive Diffusion Models, arXiv:2512.19692v2",
+    "table": "Table 2",
+    "evaluators": ["JointsFull", "JointsBody", "JointsHands"],
+    "replications": 20,
+    "normalization": "none",
+    "author_command": "python src/evaluate.py --dataset paper.yaml --checkpoint checkpoints/interact2ar_mixed_memory.ckpt --full --deterministic --first_frame",
+    "conditioning_caveat": "Paper numbers use a ground-truth first-frame condition; HHC headline comparison must disclose and match this condition before claiming fair superiority."
+  },
+  "direction": {
+    "R_precision": "higher",
+    "FID": "lower",
+    "MM_Dist": "lower",
+    "Diversity": "closer_to_ground_truth",
+    "MModality": "higher_as_table_arrow; also report jointly with MM_Dist because the paper notes that lower MModality can accompany better text alignment",
+    "PJ": "closer_to_ground_truth (the Interact2Ar table prints an up arrow, but the cited FlowMDM definition and source paper use a right arrow)",
+    "AUJ": "lower"
+  },
+  "ground_truth": {
+    "JointsFull": {"R1": 0.431, "R2": 0.631, "R3": 0.740, "FID": 0.002, "MM_Dist": 3.318, "Diversity": 8.973, "PJ": 0.021, "AUJ": 3.944},
+    "JointsBody": {"R1": 0.462, "R2": 0.655, "R3": 0.758, "FID": 0.001, "MM_Dist": 3.272, "Diversity": 9.002, "PJ": 0.014, "AUJ": 3.832},
+    "JointsHands": {"R1": 0.399, "R2": 0.597, "R3": 0.713, "FID": 0.002, "MM_Dist": 3.312, "Diversity": 8.370, "PJ": 0.017, "AUJ": 2.480}
+  },
+  "interact2ar_autoregressive_threshold": {
+    "JointsFull": {"R1": 0.453, "R2": 0.661, "R3": 0.773, "FID": 0.277, "MM_Dist": 3.095, "Diversity": 9.305, "MModality": 1.427, "PJ": 0.136, "AUJ": 8.837},
+    "JointsBody": {"R1": 0.469, "R2": 0.672, "R3": 0.779, "FID": 0.352, "MM_Dist": 3.173, "Diversity": 9.271, "MModality": 1.421, "PJ": 0.123, "AUJ": 6.620},
+    "JointsHands": {"R1": 0.422, "R2": 0.629, "R3": 0.745, "FID": 0.257, "MM_Dist": 3.111, "Diversity": 8.614, "MModality": 1.439, "PJ": 0.120, "AUJ": 7.474}
+  },
+  "acceptance": {
+    "headline": "HHC must beat the Interact2Ar autoregressive row on R-precision, FID, MM Dist, Diversity and MModality for all three joint evaluators under the paper protocol; Diversity is judged by absolute distance to the corresponding GT Diversity rather than unbounded increase.",
+    "joint_evaluator_metrics": ["R1", "R2", "R3", "FID", "MM_Dist", "Diversity", "MModality"],
+    "transition_metrics_are_separate": {
+      "metrics": ["PJ", "AUJ"],
+      "paper_protocol": "64 sequences, each concatenating 8 motions; PJ/AUJ are computed over complete composed sequences",
+      "reason_not_in_joint_generation_gate": "They are not computed from the ordinary 1696-sample test generations and the released Interact2Ar evaluate.py does not implement them.",
+      "status": "not silently claimed by the joint evaluator gate"
+    },
+    "other_method_reproductions": "paused",
+    "temperature_only_tuning": "not_an_accepted_model_improvement"
+  }
+}

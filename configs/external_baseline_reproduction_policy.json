@@ -1,0 +1,47 @@
+{
+  "schema": "hhc_external_baseline_reproduction_policy_v1",
+  "fail_closed": true,
+  "applies_before": [
+    "training",
+    "generation",
+    "evaluation",
+    "table_admission"
+  ],
+  "required_gates": [
+    "paper_and_supplement_read",
+    "official_repository_revision_frozen",
+    "paper_vs_release_differences_recorded",
+    "official_checkpoint_and_evaluator_assets_verified",
+    "dataset_lineage_split_and_filtering_verified",
+    "motion_representation_and_normalization_verified",
+    "sampling_and_conditioning_verified",
+    "author_release_protocol_calibrated_when_available",
+    "cross_method_fair_protocol_separately_defined",
+    "claim_scope_disclosed"
+  ],
+  "protocol_separation": {
+    "author_release_calibration": "Use the untouched official call chain to verify that the downloaded model, data and evaluator reproduce the author's metric space.",
+    "paper_aligned_protocol": "Resolve and disclose every paper/release mismatch; do not silently choose repository defaults.",
+    "cross_method_fair_protocol": "Use the same frozen requests, conditioning budget, sample count, repetitions and evaluator for every method.",
+    "must_not_pool": true
+  },
+  "dataset_identity": {
+    "require_split_sha256": true,
+    "require_motion_archive_sha256_when_published": true,
+    "require_key_shape_dtype_and_filtering_audit": true,
+    "require_text_normalization_and_body_model_provenance": true,
+    "unpublished_upstream_checksum_policy": "Disclose the limitation and state only the local lineage properties actually proven."
+  },
+  "interact2ar": {
+    "paper_replications": 20,
+    "released_full_replications": 5,
+    "released_readme_uses_gt_first_frame": true,
+    "required_joint_evaluators": [
+      "JointsFull",
+      "JointsBody",
+      "JointsHands"
+    ],
+    "author_release_calibration_required": true,
+    "author_conditioned_and_unconditional_results_must_be_separate": true
+  }
+}

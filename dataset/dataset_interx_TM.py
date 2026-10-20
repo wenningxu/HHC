@@ -21,19 +21,24 @@ def collate_fn(batch):
     return default_collate(batch)
 
 class Text2MotionDatasetV2HHI(data.Dataset):
-    def __init__(self, split_file, w_vectorizer, motion_file, unit_length=4, text_dir='./dataset/interx/texts_processed'):
+    def __init__(self, split_file, w_vectorizer, motion_file, unit_length=4,
+                 text_dir='./dataset/interx/texts_processed',
+                 max_motion_length=150, min_motion_len=24):
         self.w_vectorizer = w_vectorizer
         self.motion_file = motion_file
         self.max_length = 20
         self.pointer = 0
-        self.max_motion_length = 152
+        # Both the official Inter-X evaluator and InterMask evaluate 150-frame
+        # clips. Keep this independent of the MGT block size so the GT protocol
+        # cannot silently change with a model configuration.
+        self.max_motion_length = max_motion_length
         self.num_person = 2
         self.unit_length = unit_length
         self.normalizer = MotionNormalizerTorchInterX('raw')
         self.max_text_len = 35
         self.beta_dir = 'dataset/interx/betas'
         self.contact_dir = 'dataset/interx/contact'
-        min_motion_len = 30
+        # Official Inter-X/InterMask evaluation keeps clips with >=24 frames.
 
         data_dict = {}
         id_list = []
@@ -222,8 +227,14 @@ def DATALoader(dataset_name,
                motion_file,
                num_workers=8,
                unit_length=8,
-               shuffle=True):
-    trainSet = Text2MotionDatasetV2HHI(split_file, w_vectorizer, motion_file,unit_length)
+               shuffle=True,
+               max_motion_length=150,
+               min_motion_len=24):
+    trainSet = Text2MotionDatasetV2HHI(
+        split_file, w_vectorizer, motion_file, unit_length,
+        max_motion_length=max_motion_length,
+        min_motion_len=min_motion_len,
+    )
     train_loader = torch.utils.data.DataLoader(trainSet,
                                                batch_size,
                                                shuffle=shuffle,
@@ -245,7 +256,9 @@ def cycle(iterable):
 class Text2MotionDatasetV2HHI_Token(data.Dataset):
     def __init__(self, split_file, tokenizer_name, unit_length=4,
                  codebook_size=1024, text_dir='./dataset/interx/texts_processed',
-                 max_motion_length=38):  # 注意：这里的max_length是token的长度，不再是帧数
+                 max_motion_length=50, contact_dir='checkpoints/vq/contact_token_label',
+                 beta_dir='dataset/interx/betas', fallback_beta_dir=None,
+                 fallback_text_dir=None, strict_assets=False):
 
         self.tokenizer_name = tokenizer_name
         self.unit_length = unit_length
@@ -258,8 +271,11 @@ class Text2MotionDatasetV2HHI_Token(data.Dataset):
         # 参数设置
         self.max_motion_length = max_motion_length
         self.max_text_len = 35
-        self.beta_dir = 'dataset/interx/betas'
-        self.contact_dir = 'checkpoints/vq/contact_token_label'
+        self.beta_dir = beta_dir
+        self.fallback_beta_dir = fallback_beta_dir
+        self.fallback_text_dir = fallback_text_dir
+        self.strict_assets = strict_assets
+        self.contact_dir = contact_dir
 
         # 训练时的 Bucket Sampling 指针
         self.pointer = 0
@@ -298,7 +314,10 @@ class Text2MotionDatasetV2HHI_Token(data.Dataset):
                     continue
 
                 # [保留] 加载 Beta 和 Gender 数据 (原逻辑)
-                beta_data = np.load(pjoin(self.beta_dir, name + '.npz'), allow_pickle=True)
+                beta_path = pjoin(self.beta_dir, name + '.npz')
+                if not os.path.isfile(beta_path) and self.fallback_beta_dir:
+                    beta_path = pjoin(self.fallback_beta_dir, name + '.npz')
+                beta_data = np.load(beta_path, allow_pickle=True)
                 betas = beta_data['betas'].reshape(-1, )  # (2, 10) -> (20,) 或保持原样
                 gender_list_str = beta_data['gender']
                 gender_codes = [0 if g == 'male' else 1 for g in gender_list_str]
@@ -306,7 +325,10 @@ class Text2MotionDatasetV2HHI_Token(data.Dataset):
                 # [保留] 加载文本数据 (原逻辑)
                 text_data = []
                 flag = False
-                with cs.open(pjoin(text_dir, name + '.txt')) as f:
+                text_path = pjoin(text_dir, name + '.txt')
+                if not os.path.isfile(text_path) and self.fallback_text_dir:
+                    text_path = pjoin(self.fallback_text_dir, name + '.txt')
+                with cs.open(text_path) as f:
                     for line in f.readlines():
                         text_dict = {}
                         line_split = line.strip().split('#')
@@ -340,8 +362,10 @@ class Text2MotionDatasetV2HHI_Token(data.Dataset):
                     length_list.append(len(m_token_list))
 
             except Exception as e:
-                # print(e)
-                pass
+                if self.strict_assets:
+                    raise RuntimeError(
+                        f'failed to load MGT token asset for {name}: {e}'
+                    ) from e
 
         # [保留] 排序用于 Bucket Sampling
         name_list, length_list = zip(*sorted(zip(new_name_list, length_list), key=lambda x: x[1]))
@@ -443,8 +467,22 @@ def DATALoader_Train(dataset_name,
                motion_file,
                num_workers=8,
                unit_length=4,
-               shuffle=True):
-    trainSet = Text2MotionDatasetV2HHI_Token(split_file, motion_file,unit_length,codebook_size)
+               shuffle=True,
+               contact_dir='checkpoints/vq/contact_token_label',
+               max_motion_length=50,
+               text_dir='./dataset/interx/texts_processed',
+               beta_dir='dataset/interx/betas',
+               fallback_beta_dir=None,
+               fallback_text_dir=None,
+               strict_assets=False):
+    trainSet = Text2MotionDatasetV2HHI_Token(
+        split_file, motion_file, unit_length, codebook_size,
+        contact_dir=contact_dir, max_motion_length=max_motion_length,
+        text_dir=text_dir, beta_dir=beta_dir,
+        fallback_beta_dir=fallback_beta_dir,
+        fallback_text_dir=fallback_text_dir,
+        strict_assets=strict_assets,
+    )
     train_loader = torch.utils.data.DataLoader(trainSet,
                                                batch_size,
                                                shuffle=shuffle,

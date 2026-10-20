@@ -353,6 +353,10 @@ class FK_Pair_Layer_Batch(nn.Module):
             self.device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
         else:
             self.device = device
+        # Inputs are absolute T-pose joints, often views of the global table.
+        # Constructing another FK/model must not convert that table twice.
+        skeleton_data_p1 = skeleton_data_p1.clone()
+        skeleton_data_p2 = skeleton_data_p2.clone()
         skeleton_data_p1[:, 1:] -= skeleton_data_p1[:, parents[1:]]
         skeleton_data_p2[:, 1:] -= skeleton_data_p2[:, parents[1:]]
         self.fk_p1 = ForwardKinematicsLayerBatch(parents=parents, device=self.device)

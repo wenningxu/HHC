@@ -1,0 +1,46 @@
+{
+  "status": "proposed_only_not_applied",
+  "mapping_validation": "eval.extract_interx_contacts_codex.map_contact_rows via New_MMM python; exit_code 0",
+  "source_batch": "dataset/interx/contact_pairs_codex_luna_strict_v3_train/_batches/1bee17d10477b66d.json",
+  "entries": [
+    {
+      "source_name": "G013T007A030R000",
+      "caption": "Two people stand face to face, with the first person extending his/her left hand to pat the right cheek of the second person.",
+      "pickle_sha256": "194dbbc096cd7acaf7285a54ab0f528ef048c7ed034eee379b2fd7838a9909fc",
+      "old_contacts": [{"p1_part":"right hand (palm)","p1_ids":[23,26],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101}],
+      "new_contacts": [{"p1_part":"left hand (palm)","p1_ids":[17,33],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101}],
+      "reason": "Caption explicitly says first left hand; cheek is represented by existing head candidate. Global person naming may be swapped, but anatomical left/right is retained.",
+      "uncertainty": "Exact cheek subregion is unavailable in the existing candidate map."
+    },
+    {
+      "source_name": "G013T007A030R001",
+      "caption": "Two people stand facing each other. One extends his/her right hand and forcefully slaps the other person's left cheek. In anger, the second person raises his/her right leg to kick the first person.",
+      "pickle_sha256": "e3c8d5622d5152fc432212eda8b8a0ea5402d6e74f41ebd6df4125b18b15f84e",
+      "old_contacts": [{"p1_part":"left hand (palm)","p1_ids":[17,33],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101},{"p1_part":"right leg","p1_ids":[12,16,18,19,22,28,36,46,55,62],"p2_part":"stomach","p2_ids":[0,4,68,74],"contact_type":"flat","align_type":"strict","w_p1":0.09999999000000101,"w_p2":0.8999999100000091}],
+      "new_contacts": [{"p1_part":"right hand (palm)","p1_ids":[23,26],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101}],
+      "reason": "The hand side is explicitly right; the kick is explicitly second person's right leg toward first person, but the target body part is not specified.",
+      "review_status": "blocked_missing_kick_target",
+      "do_not_apply": true,
+      "uncertainty": "The one-row hand proposal is not a complete correction. Do not apply until the kick target is supplied; candidate target options are head/torso/leg, none textually determined."
+    },
+    {
+      "source_name": "G013T007A030R003",
+      "caption": "Two people stand facing each other. The first person raises his/her hands and gently pats the cheeks of the second person on both sides. In return, the second person also raises his/her hands and pats the cheeks of the first person. In reaction, the first person leans back, attempting to avoid being patted again.",
+      "pickle_sha256": "ffed54fcdd9b8d2e62dc1addf5f7a100033760a45c20e7baced3a685677699b4",
+      "old_contacts": [{"p1_part":"left hand (palm), right hand (palm)","p1_ids":[17,23,26,33],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101},{"p1_part":"left hand (palm), right hand (palm)","p1_ids":[17,23,26,33],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.09999999000000101,"w_p2":0.8999999100000091}],
+      "new_contacts": [{"p1_part":"left hand (palm), right hand (palm)","p1_ids":[17,23,26,33],"p2_part":"head","p2_ids":[39,51,52,66],"contact_type":"flat","align_type":"strict","w_p1":0.8999999100000091,"w_p2":0.09999999000000101},{"p1_part":"head","p1_ids":[39,51,52,66],"p2_part":"left hand (palm), right hand (palm)","p2_ids":[17,23,26,33],"contact_type":"flat","align_type":"strict","w_p1":0.09999999000000101,"w_p2":0.8999999100000091}],
+      "reason": "Caption is reciprocal; proposed relations represent both directions rather than duplicating hands→head.",
+      "uncertainty": "Cheek is approximated by head candidate; the caption gives the order, but frame boundaries are unspecified."
+    },
+    {
+      "source_name": "G026T001A009R022",
+      "review_status": "approved_for_diagnostic_only",
+      "caption": "A person sits on the other person's leg, while the other person places his/her hands on his/her upper arms.",
+      "pickle_sha256": "4569ef62fefe7b257d09ec6fa4cd1f98184c91f5798dc39f9a36f065951f004c",
+      "old_contacts": [{"p1_part":"butt","p1_ids":[9,71],"p2_part":"left leg, right leg","p2_ids":[12,15,16,18,19,20,21,22,25,28,30,36,45,46,53,55,56,60,62,64],"contact_type":"flat","align_type":"strict","w_p1":0.499999950000005,"w_p2":0.499999950000005},{"p1_part":"left hand (palm), right hand (palm)","p1_ids":[17,23,26,33],"p2_part":"left arm, right arm","p2_ids":[5,6,8,11,17,24,32,34,37,44,49,57,69],"contact_type":"flat","align_type":"strict","w_p1":0.499999950000005,"w_p2":0.499999950000005}],
+      "new_contacts": [{"p1_part":"butt","p1_ids":[9,71],"p2_part":"left leg, right leg","p2_ids":[12,15,16,18,19,20,21,22,25,28,30,36,45,46,53,55,56,60,62,64],"contact_type":"flat","align_type":"strict","w_p1":0.499999950000005,"w_p2":0.499999950000005},{"p1_part":"left arm, right arm","p1_ids":[5,6,8,11,17,24,32,34,37,44,49,57,69],"p2_part":"left hand (palm), right hand (palm)","p2_ids":[17,23,26,33],"contact_type":"flat","align_type":"strict","w_p1":0.499999950000005,"w_p2":0.499999950000005}],
+      "reason": "Main-agent proposal from caption plus visual review: preserve P1 butt→P2 legs and express support as P1 arms→P2 hands.",
+      "uncertainty": "Caption says upper arms but does not specify left/right or which person's arms beyond the relational wording; proposed mapping follows requested role convention."
+    }
+  ]
+}

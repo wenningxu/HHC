@@ -1,0 +1,40 @@
+{
+  "schema": "hhc_interhuman_mgt_data_contract_v1",
+  "status": "implemented_not_launched",
+  "official_source_finding": {
+    "source": "/mnt/8T-HDD/wenning/InterMask/models/mask_transformer/transformer_trainer.py",
+    "behavior": "InterMask crops and processes the paired motion first, then invokes the frozen VQ encoder online inside every MGT forward pass.",
+    "rejected_shortcut": "Do not encode the uncropped full motion once and crop cached tokens: convolutional receptive fields make boundary tokens numerically different."
+  },
+  "implementation": "dataset/interhuman_mgt.py",
+  "train": {
+    "official_loader_eligible_identifiers": 5637,
+    "base_records": 11274,
+    "base_augmentation": "original plus released left/right swap",
+    "per_draw_choices": [
+      "caption",
+      "exclusive-endpoint crop to at most 300 raw frames",
+      "coordinate anchor person",
+      "final output person order"
+    ],
+    "randomness": "SHA256-derived draw seed; independent local Python and NumPy streams; no worker-global RNG dependence",
+    "output": "two normalized float32 [300,262] motions plus processed length and caption"
+  },
+  "tokenization": {
+    "policy": "frozen paired HHC VQ encode after crop/process/pad, under eval and no_grad",
+    "paired_input": "[B,300,524]",
+    "token_shape": "[B,75,2] in Body,Root storage order",
+    "valid_token_length": "floor(processed_length/4) to match released InterMask InterHuman transformer training and generation",
+    "maximum_valid_tokens": 74,
+    "mgt_block_size": 75,
+    "generation_length_bridge": "call the unchanged HHC sampler with m_length=4*valid_token_length, never the unrounded processed frame length; its existing ceil(m_length/4) then reproduces the released InterMask floor(processed_length/4) exactly without changing Inter-X sampling",
+    "architecture_specific_tail": "paper architecture attends only floor(processed_length/4) code positions and requires no End token; the retained high-performing historical topology explicitly replaces the first invalid online-VQ tail code with END and the remainder with PAD, while loss remains restricted to valid code positions",
+    "note": "processed_length is at most 299, hence released floor division yields at most 74 valid tokens. Real VQ -> 75x2 training forwards for both paper and historical topologies, plus a 74x2 floor-length sample, are CPU-tested."
+  },
+  "forbidden": [
+    "test or val examples in MGT training",
+    "Inter-X token cache or normalization",
+    "shape or contact-timing conditioning",
+    "pre-crop full-motion token caching"
+  ]
+}

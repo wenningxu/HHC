@@ -1,0 +1,216 @@
+{
+  "frozen_input_provenance": {
+    "dataset_loader": {
+      "bytes": 19551,
+      "path": "/mnt/8T-HDD/wenning/HHC/dataset/dataset_interx_TM.py",
+      "sha256": "c3993a2c1f3dce799a5673b46e47341a0571c90aae567e6e33f82ab384fc145d"
+    },
+    "evaluator_options": {
+      "bytes": 745,
+      "path": "/mnt/8T-HDD/wenning/HHC/checkpoints/hhi/Comp_v6_KLD01/opt.txt",
+      "sha256": "f4ddaa81157259ce6b795f456be98263e50cd788a7800c30aacbfc2361b2d6dd"
+    },
+    "evaluator_weights": {
+      "bytes": 248960185,
+      "path": "/mnt/8T-HDD/wenning/HHC/checkpoints/hhi/text_mot_match/model/finest.tar",
+      "sha256": "b1699f13276c044d8b7ae5f6063eb241b7ef96d7e92c878857abd5081e40701e"
+    },
+    "evaluator_wrapper": {
+      "bytes": 4045,
+      "path": "/mnt/8T-HDD/wenning/HHC/models/evaluator_wrapper.py",
+      "sha256": "f2baf8a3251f0bc2379c4dc5b875488c4c875b445622793e83d6bd70d74fafe6"
+    },
+    "normalizer": {
+      "bytes": 15616,
+      "path": "/mnt/8T-HDD/wenning/HHC/utils/motion_process.py",
+      "sha256": "8e2f0aaaefd9b7974d01cdfc20280876d20eec75c737523b8f45ced8bae2198d"
+    },
+    "protocol": {
+      "bytes": 3721,
+      "path": "/mnt/8T-HDD/wenning/HHC/configs/fair_interx_protocol.yaml",
+      "sha256": "1db8e9389cdc70c0a875383b1be64dba32ca9fdff92115e04916992a0c5ad11f"
+    },
+    "raw_mean": {
+      "bytes": 2816,
+      "path": "/mnt/8T-HDD/wenning/HHC/dataset/interx/Interx_Mean.npy",
+      "sha256": "a54dcfd012e07742077050e3a7ee1b4a2918ba2825466ab698d0cf6f9e438446"
+    },
+    "raw_std": {
+      "bytes": 2816,
+      "path": "/mnt/8T-HDD/wenning/HHC/dataset/interx/Interx_Std.npy",
+      "sha256": "23a2cf52a19cbaab16334821f2a3183e915c671f59fac702b68a1256742bc376"
+    },
+    "request_preparer": {
+      "bytes": 7208,
+      "path": "/mnt/8T-HDD/wenning/HHC/tools/prepare_fair_eval_requests.py",
+      "sha256": "feb859479c858d84499cb1745fc243dfcaf0e6830084ed44fb641094af70a343"
+    },
+    "request_verifier": {
+      "bytes": 4803,
+      "path": "/mnt/8T-HDD/wenning/HHC/tools/verify_fair_eval_requests.py",
+      "sha256": "6b357b1db6f646808820977227b53d4b1dfa8d321103b4db25f23f9931dcb7b1"
+    },
+    "test_motions": {
+      "bytes": 400718784,
+      "path": "/mnt/8T-HDD/wenning/HHC/dataset/interx/motions/test.h5",
+      "sha256": "d67fd5f24342aff843ff2588314f9ffe6e932fcc5590393e9660a306ce9d6957"
+    },
+    "test_split": {
+      "bytes": 29036,
+      "path": "/mnt/8T-HDD/wenning/HHC/dataset/interx/splits/test.txt",
+      "sha256": "db32bbe12651875c41113cd20214afcf59ff9489a65aac6f3b0a5b1ecc2b075b"
+    }
+  },
+  "multimodality": {
+    "pairs": 10,
+    "prompts": 100,
+    "repeats": 30
+  },
+  "protocol": "interx_official_v1",
+  "records": [
+    {
+      "bytes": 9850691,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_00.npz",
+      "replication": 0,
+      "seed": 1234,
+      "sha256": "01d894c2e95183b2aaa510470819d64cd6c5862beb47b114320e91270d0100d7"
+    },
+    {
+      "bytes": 9850212,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_01.npz",
+      "replication": 1,
+      "seed": 1235,
+      "sha256": "36621045139752e8d0a98ff1e54fea3327b2020bfeca695261059cccee700eb9"
+    },
+    {
+      "bytes": 9845572,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_02.npz",
+      "replication": 2,
+      "seed": 1236,
+      "sha256": "d8415c6e8e3136baf97d8954d3f31d51ce058a108b740382e681d3edbb1fa7db"
+    },
+    {
+      "bytes": 9849386,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_03.npz",
+      "replication": 3,
+      "seed": 1237,
+      "sha256": "365e17b17915b66f8cc8faef4d2f0de6f83ff915a1aa2a2df0cb8644b484428b"
+    },
+    {
+      "bytes": 9850826,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_04.npz",
+      "replication": 4,
+      "seed": 1238,
+      "sha256": "e283bd31dee781cfd7651c55227065d6b36ddd75e2246c5abed5da7f9e13ace9"
+    },
+    {
+      "bytes": 9844042,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_05.npz",
+      "replication": 5,
+      "seed": 1239,
+      "sha256": "b2a53557b392d8b8da5a12f9cc31d7031cdf1ad9d83ff5e458219192b4315e75"
+    },
+    {
+      "bytes": 9849373,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_06.npz",
+      "replication": 6,
+      "seed": 1240,
+      "sha256": "ecd48fdf40e05420d077deb9f025aaa702ed3966eafdc3aa3a9bcd68523aaf68"
+    },
+    {
+      "bytes": 9846432,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_07.npz",
+      "replication": 7,
+      "seed": 1241,
+      "sha256": "822fd0c69b97ab39ed85f9a7d9852359817a7e6cf2c2317264ae9bb0f6a13114"
+    },
+    {
+      "bytes": 9848981,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_08.npz",
+      "replication": 8,
+      "seed": 1242,
+      "sha256": "57b819b564f1800c4fbd664b231ea2f6abcdbf7e0340217b6464219d602ce378"
+    },
+    {
+      "bytes": 9843513,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_09.npz",
+      "replication": 9,
+      "seed": 1243,
+      "sha256": "e4032656a9720a8b4a2ed022895ed2b220d4fd6a202c2535876c93f19cce6ba9"
+    },
+    {
+      "bytes": 9848567,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_10.npz",
+      "replication": 10,
+      "seed": 1244,
+      "sha256": "a5611c2fce99ddc93f59129dfd173b8cfa72e3a300344241b6b901371dadf147"
+    },
+    {
+      "bytes": 9847917,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_11.npz",
+      "replication": 11,
+      "seed": 1245,
+      "sha256": "e346c00c6427c1765b623e9c108eb5f12e62ae85630d12188b309a62a4b85079"
+    },
+    {
+      "bytes": 9850685,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_12.npz",
+      "replication": 12,
+      "seed": 1246,
+      "sha256": "b50ce25a04b1ed73d0afab775e825915a28f9c9e4d3bcf46a05bd6b5e37a5465"
+    },
+    {
+      "bytes": 9847950,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_13.npz",
+      "replication": 13,
+      "seed": 1247,
+      "sha256": "716272f16d8fab2ee2b01b875bbefe89727aad1037bc6be7057f5e2ee984180b"
+    },
+    {
+      "bytes": 9850597,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_14.npz",
+      "replication": 14,
+      "seed": 1248,
+      "sha256": "0e73ffdcfbb931ac934e0f9f5b4b899d1e0c6846ee92406089816d7a838a7e81"
+    },
+    {
+      "bytes": 9849842,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_15.npz",
+      "replication": 15,
+      "seed": 1249,
+      "sha256": "156e233d64717e0c1ad20eeb740714d24194f7763a2b9060f5eb1339fc8d4eaa"
+    },
+    {
+      "bytes": 9845290,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_16.npz",
+      "replication": 16,
+      "seed": 1250,
+      "sha256": "e8e4114721239f664c4b7097a5e5027e9bb4943a5506846455fda04bc4a73137"
+    },
+    {
+      "bytes": 9847532,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_17.npz",
+      "replication": 17,
+      "seed": 1251,
+      "sha256": "c916baf7f70d07fdd15a1139d7f7eb5eddb0dfa3e8e48758e4d007f5a3db3941"
+    },
+    {
+      "bytes": 9851041,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_18.npz",
+      "replication": 18,
+      "seed": 1252,
+      "sha256": "ce844cf8b55bf17afa144721b5bf011ba1109a36cafb8c23ada7532534ed9d45"
+    },
+    {
+      "bytes": 9849178,
+      "path": "/mnt/8T-HDD/wenning/HHC/output/fair_interx_requests/replication_19.npz",
+      "replication": 19,
+      "seed": 1253,
+      "sha256": "b645c07945a52f87cef1595386857616bd18f8746df764d46a6621ca7da2e4b2"
+    }
+  ],
+  "replications": 20,
+  "request_contract_version": 2,
+  "samples_per_replication": 1696,
+  "status": "pass"
+}

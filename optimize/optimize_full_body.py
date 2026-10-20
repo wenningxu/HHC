@@ -30,7 +30,20 @@ def optimize_full_body(
         fine_region_pairs=None,  # Chi3D 已标注好的 75-region 精细接触对
         num_epochs=200,  # 迭代次数
         lr=1e-2,  # 学习率
-        device='cuda'
+        device='cuda',
+        signed_distance_backend='nearest_vertex',
+        volumetric_smpl_query_chunk=512,
+        volumetric_smpl_frame_batch_size=1,
+        volumetric_smpl_seed=1234,
+        volumetric_smpl_penetration_vertex_count=None,
+        volumetric_smpl_body_encoding_samples=None,
+        volumetric_smpl_penetration_frame_count=None,
+        volumetric_smpl_backend=None,
+        foot_contact_mask_policy='released_dynamic',
+        penetration_loss_reduction='penetrating_vertex_mean',
+        aux_temporal_weighting='released_broadcast',
+        static_body_models=None,
+        physical_ground_reference=None,
 ):
     """
     执行 High-Five 动作优化
@@ -111,7 +124,34 @@ def optimize_full_body(
     optimizer = optim.Adam(optimizer_params, lr=lr)
     # scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[150, 180], gamma=0.1)
     # 实例化 Loss (确保使用最新版的 DyadicInteractionLoss)
-    loss_module = DyadicInteractionLoss(device=device).to(device)
+    loss_type = DyadicInteractionLoss
+    if physical_ground_reference is not None:
+        from functools import partial
+        from optimization.mesh_ground_support import MeshGroundSupportLoss
+        loss_type = partial(MeshGroundSupportLoss, reference_params=physical_ground_reference,
+                            support_reduction='height_decay', ground_weight=200.,
+                            temporal_weight=1., horizontal_weight=.5)
+    loss_module = loss_type(
+        device=device,
+        static_body_models=static_body_models,
+        foot_contact_mask_policy=foot_contact_mask_policy,
+        penetration_loss_reduction=penetration_loss_reduction,
+        aux_temporal_weighting=aux_temporal_weighting,
+        signed_distance_backend=signed_distance_backend,
+        volumetric_smpl_query_chunk=volumetric_smpl_query_chunk,
+        volumetric_smpl_frame_batch_size=volumetric_smpl_frame_batch_size,
+        volumetric_smpl_seed=volumetric_smpl_seed,
+        volumetric_smpl_penetration_vertex_count=(
+            volumetric_smpl_penetration_vertex_count
+        ),
+        volumetric_smpl_body_encoding_samples=(
+            volumetric_smpl_body_encoding_samples
+        ),
+        volumetric_smpl_penetration_frame_count=(
+            volumetric_smpl_penetration_frame_count
+        ),
+        volumetric_smpl_backend=volumetric_smpl_backend,
+    ).to(device)
 
     # 准备“初始状态”作为正则化参考 (detach)
     # 直接深度拷贝一份 detach 的字典

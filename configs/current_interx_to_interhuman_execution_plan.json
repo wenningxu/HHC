@@ -1,0 +1,529 @@
+{
+  "schema": "hhc_current_execution_plan_v1",
+  "status": "active",
+  "updated_at_local": "2026-09-09T17:49:00+01:00",
+  "user_directives": {
+    "current_dataset": "Inter-X",
+    "acceptance_source": "Interact2AR paper Table 2 joint-only official results",
+    "acceptance_config": "configs/interact2ar_joint_paper_acceptance_v2.json",
+    "other_method_reproductions": "paused_pending_later_root_cause_review",
+    "mgt_shape_condition": false,
+    "current_no_shape_training_data_contract": "Inter-X plus the existing historical MMM token/contact caches only; AMASS is neither required nor read by the active no-shape masked-only 50k diagnostic",
+    "shape_augmentation_question": "deferred until the user finishes preparing the donor dataset; only then test whether optimization-based external-shape augmentation improves Diversity and MModality",
+    "shape_augmentation_asset_owner": "user_prepares_dataset_then_handoff_to_agent",
+    "next_dataset_after_interx_acceptance": "InterHuman"
+  },
+  "temporary_storage_safety_constraint": {
+    "status": "active_until_space_is_exhausted_or_user_changes_it",
+    "policy": "do not delete or move artifacts unless space is actually insufficient; record cleanup candidates only",
+    "cleanup_ledger": "configs/deferred_cleanup_candidates.json",
+    "last_observed_free_space": "167G at 2026-09-09 17:49 BST",
+    "training_implication": "the completed no-shape 300k artifacts and formal evaluation are retained; one matched 50k masked-only diagnostic is active on GPU0 and no cleanup is authorized"
+  },
+  "interx_evaluation_contracts": {
+    "shared_test_requests": {
+      "official_test_split_entries": 1708,
+      "valid_entries": 1706,
+      "batch_size": 32,
+      "drop_last": true,
+      "evaluated_samples_per_replication": 1696,
+      "replications": 20,
+      "base_seed": 1234,
+      "maximum_motion_frames": 150,
+      "multimodality": "100 frozen prompts, 30 generations per prompt, 10 evaluator pairs"
+    },
+    "legacy_intermask_interx_main": {
+      "representation": "official Inter-X 672D raw motion using Interx_Mean.npy and Interx_Std.npy",
+      "evaluator": "MMM checkpoints/hhi text-motion evaluator",
+      "metrics": "FID, R-Precision, Matching, Diversity and MModality",
+      "purpose": "same-protocol InterMask/Inter-X main comparison"
+    },
+    "interact2ar_joint_acceptance": {
+      "representation": "unnormalized joints recovered with MMM SMPLX_NEUTRAL.npz",
+      "evaluators": [
+        "JointsFull",
+        "JointsBody",
+        "JointsHands"
+      ],
+      "normalization": "none",
+      "weights": "released Interact2AR finest.tar checkpoints for each joint part",
+      "purpose": "separate joint-only table and comparison against Interact2AR Table 2; never mix its FID with the legacy 672D FID",
+      "provenance": "output/interact2ar_joint_evaluator_suite/pre_shape_summary.json"
+    },
+    "fid_reporting_namespaces": {
+      "legacy_periodic_validation_fid": "legacy MMM 672D evaluator on the periodic validation request; no-shape terminal step 300k = 0.3973 and best over all saved checkpoints is step 260k = 0.3619",
+      "joint_checkpoint_selection_fid": "released Interact2AR JointsFull evaluator on frozen held-out validation; e.g. no-shape step 30k = 0.3393452745",
+      "legacy_official_test_fid": "legacy MMM 672D evaluator, official test, 20-rep mean; no-shape selected step 30k = 0.4118979945",
+      "joint_official_test_fid": "released Interact2AR JointsFull evaluator, official test, 20-rep mean; the same no-shape selected step 30k = 0.2019194012",
+      "comparison_rule": "never compare numbers across namespaces as if they share a scale; every report must name evaluator, split and checkpoint step"
+    },
+    "protocol_source": "configs/fair_interx_protocol.yaml"
+  },
+  "coshmdm_interx_status": {
+    "state": "completed_two_day_capped_retraining_and_20rep_evaluation_but_quarantined_from_current_claims",
+    "upstream_commit": "c5116ab3bead55051ffec2ec9a161a38d2ab5116",
+    "release_limitation": "upstream contains an Inter-X loader/config entry but its released train/eval entrypoints are hard-coded to InterHuman and it provides no official Inter-X 262D-to-shape-specific-672D exporter",
+    "selected_step": 40000,
+    "legacy_672d_test": {
+      "FID": 41.4448,
+      "Matching": 9.0506,
+      "R1": 0.1201
+    },
+    "joint_test_FID": {
+      "JointsFull": 52.108398,
+      "JointsBody": 56.334312,
+      "JointsHands": 34.155706
+    },
+    "diagnosis": "finite/decreasing training loss but severe validation deterioration plus a 15.8633-FID representation-oracle gap; both the lossy 22-joint 262D representation/projection and learned generator contribute",
+    "policy": "do not retrain or use as a headline comparison now; retain all artifacts and revisit the data/representation adaptation later, with any further training capped at two days",
+    "evidence": "output/coshmdm_interx_reproduction_diagnosis.md"
+  },
+  "primary_corrected_hhc_contract": {
+    "role": "main HHC retraining/result; not the current no-shape diagnostic",
+    "run": "output/t2i_trans/2026-09-02-11-49-08_hhc_historical_plus_paper_mask_ratio_raw12288_300k_seed114514_v2",
+    "vq": "pre-cleanup raw Inter-X VQ, 12288 codes, checkpoint net_175000.pth",
+    "vq_reconstruction": {
+      "checkpoint_sha256": "fdf5afaa5d3513f933254fafc831f6046f7c38b5e649db08fb6be7e0ce1006bb",
+      "representation": "original raw Inter-X 672D; code_dim_total=256 split as body 96, hands 96 and root 64",
+      "normalization": {
+        "mean": "dataset/interx/Interx_Mean.npy",
+        "mean_sha256": "a54dcfd012e07742077050e3a7ee1b4a2918ba2825466ab698d0cf6f9e438446",
+        "std": "dataset/interx/Interx_Std.npy",
+        "std_sha256": "23a2cf52a19cbaab16334821f2a3183e915c671f59fac702b68a1256742bc376",
+        "root_stats_not_used": true
+      },
+      "original_training_wandb_validation_fid_at_step_175000": 0.26188,
+      "official_672d_fid": 0.29441722725218256,
+      "mpjpe_m": 0.1362613624044445,
+      "body_mpjpe_m": 0.1060318729095048,
+      "hand_mpjpe_m": 0.1614419806422834,
+      "evidence": [
+        "output/vq_historical_eval/net_175000_reconstruction.json",
+        "output/vq_historical_eval/net_175000_reconstruction_ordinary_fid_current_scorer.json"
+      ],
+      "metric_context": "0.26188 is the original training-time W&B validation value; 0.294417 is the later frozen 1696-sample fair-evaluator reconstruction value, so they must not be presented as the same sampling run",
+      "not_to_be_confused_with": "the separate 8096-code/code_dim-64/newnormal net_best_fid checkpoint has frozen fair reconstruction FID 0.2763924065 and MPJPE 0.1433837139 m, but is not representation-compatible with the retained historical raw-12288 MGT/cache contract"
+    },
+    "mgt": "historical high-performing 1024-d/16-head topology: 7 global base + 2 local cross-attention + 9 output blocks",
+    "single_training_change_vs_historical_strong_implementation": "paper kinematic mask-ratio distribution",
+    "mask_ratio_exact_contract": {
+      "channel_order": "Body, Hands, Root",
+      "tau_sampling": "draw three independent Uniform(0,1) values and sort so tau_root > tau_body > tau_hand",
+      "ratio": "gamma(tau)=cos(pi*tau/2), therefore mask_ratio_root < mask_ratio_body < mask_ratio_hand",
+      "count_discretization": "round(valid_part_length * mask_ratio), clamped to at least one masked token for every non-empty part",
+      "historical_behavior_retained": "pkeep=0.5 BERT-style random-token corruption before applying the kinematic mask"
+    },
+    "shape_conditioning": true,
+    "training_loss": "historical all-valid",
+    "loss_rationale": "paper prose says masked positions while Eq.3 sums all positions; all-valid is deliberately retained so mask ratio is the only numerical training change and historical performance remains the reference",
+    "training_steps": 300000,
+    "selected_step": 260000,
+    "selected_legacy_official_validation_fid": 0.1687302563215809,
+    "joint_test_means": {
+      "JointsFull": {
+        "FID": 0.11798022854912063,
+        "R1": 0.438502358490566,
+        "R2": 0.6437205188679245,
+        "R3": 0.7602299528301887,
+        "MM_Dist": 3.1683772024118677,
+        "Diversity": 9.276851081848145,
+        "MModality": 0.048659604508429766
+      },
+      "JointsBody": {
+        "FID": 0.10910621184963816,
+        "R1": 0.4503832547169811,
+        "R2": 0.6564563679245283,
+        "R3": 0.7682783018867922,
+        "MM_Dist": 3.235009287438303,
+        "Diversity": 9.133269262313842,
+        "MModality": 0.05506111467257142
+      },
+      "JointsHands": {
+        "FID": 0.10216282611552288,
+        "R1": 0.4087853773584905,
+        "R2": 0.6127358490566038,
+        "R3": 0.7314563679245283,
+        "MM_Dist": 3.1902043767695156,
+        "Diversity": 8.530597734451295,
+        "MModality": 0.0508725119754672
+      }
+    },
+    "joint_acceptance_status": "beats Interact2AR on FID and GT-distance-to-Diversity for all three evaluators, but not yet on R1/R2/R3, MM_Dist, or MModality; numerical comprehensive gate fails",
+    "joint_test_evidence": "output/interact2ar_joint_evaluator_suite/pre_shape_summary.json",
+    "joint_acceptance_evidence": "output/interact2ar_joint_evaluator_suite/hhc_existing_vs_paper_acceptance.json",
+    "single_factor_contract_evidence": "output/hhc_historical_plus_paper_mask_contract.json"
+  },
+  "active_no_shape_diagnostic_training_and_sampling_contract": {
+    "role": "targeted MGT shape-conditioning diagnostic for MModality; not a paper-prescribed architecture change and not a strict causal single-factor comparison to the retained 260k shape-conditioned run",
+    "vq": "pre-cleanup raw Inter-X VQ, 12288 codes, checkpoint net_175000.pth",
+    "mgt": "historical high-performing 1024-d, 16-head implementation: a 9-block base composed of 7 global self-attention blocks plus 2 local cross-attention blocks, followed by 9 output self-attention blocks",
+    "training_mask": "historical pipeline with paper kinematic mask-ratio distribution",
+    "training_loss": "historical all-valid",
+    "mgt_shape_condition": false,
+    "sampler": "sample_intra_cas",
+    "sampling_steps": 50,
+    "sampling_steps_unit": "50 outer MaskGIT iterations, not 50 total network calls",
+    "cascade_order": "Root -> Body -> Hands with immediate within-iteration updates",
+    "token_update_support": "only currently masked positions are eligible to be updated or remain masked; once fixed, a token stays fixed in later iterations",
+    "full_length_compute_contract": "up to 150 active channel stages and 300 model forwards with classifier-free guidance across the 50 outer iterations",
+    "temperature": 0.5,
+    "cfg_scale": 3.5,
+    "wandb": "online with train loss/accuracy, gradient and weight norms, and periodic validation FID/R-Precision/Matching/Diversity plus 11-repeat/10-pair diagnostic MModality; formal Interact2AR joint evaluation uses 20 paired replications",
+    "sampling_runtime_evidence": "output/hhc_sampling_runtime_audit.json"
+  },
+  "ordered_stages": [
+    {
+      "stage": 1,
+      "name": "no_shape_condition_control",
+      "status": "formal_20rep_pilot_and_300k_training_and_test3_selection_and_formal20_all_complete; masked-only_training_loss_followup_running",
+      "diagnostic_steps": 50000,
+      "full_training_budget_steps": 300000,
+      "resume_from_step": 50000,
+      "resume_gpu": 1,
+      "resume_session_id": 47088,
+      "resume_started_at_local": "2026-09-08T04:47:51+01:00",
+      "resume_contract": "strict in-place Lightning state restore from latest-000050000.ckpt using all 17 manifest-bound launch-source hashes in an isolated source tree; optimizer, scheduler, RNG and W&B run ywzcskfr resumed; diagnostic stop removed while total schedule remains 300000",
+      "resume_source_recovery": "output/hhc_no_shape_v4_launch_source_recovery.json",
+      "resume_source_tree_audit": "output/hhc_no_shape_v4_resume_source_tree.json",
+      "resume_launcher": "tools/continue_hhc_no_shape_to_300k.sh",
+      "frozen_50k_manifest": "output/t2i_trans/2026-09-07-11-49-54_hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4/training_manifest_at_50k.json",
+      "continuation_progress": {
+        "checked_at_local": "2026-09-09T03:35:49+01:00",
+        "latest_full_state_step": 300000,
+        "latest_full_state_checkpoint": "output/t2i_trans/2026-09-07-11-49-54_hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4/latest-000300000.ckpt",
+        "latest_automatic_validation_step": 300000,
+        "latest_automatic_validation_fid": 0.3973,
+        "status": "complete_exit0_checkpoint_and_wandb_audits_passed",
+        "terminal_checkpoint_audit": "output/hhc_no_shape_v4_full300k_final_checkpoint_audit.json",
+        "wandb_history_audit": "output/hhc_no_shape_v4_full300k_wandb_history_audit.json"
+      },
+      "validation_interval": 10000,
+      "active_run": "hhc_historical_paper_mask_no_mgt_shape_pilot50k_seed114514_v4",
+      "wandb_run_id": "ywzcskfr",
+      "latest_automatic_validation": {
+        "step": 50000,
+        "fid": 0.40752628445625305,
+        "diversity": 8.991015434265137,
+        "r_precision": [
+          0.4375,
+          0.6213235259056091,
+          0.7224264740943909
+        ],
+        "matching": 3.689903736114502,
+        "multimodality_diagnostic": 0.21607978641986847,
+        "wandb_local_evidence": "wandb/run-20260907_115002-ywzcskfr/files/wandb-summary.json"
+      },
+      "best_automatic_validation_so_far": {
+        "step": 260000,
+        "fid": 0.3619,
+        "other_metrics_status": "the resumed local W&B summary JSON is not flushed until run finish; do not mix another checkpoint's supplementary metrics with the 260k FID",
+        "criterion": "legacy automatic validation FID only; formal joint-val selection may choose another checkpoint"
+      },
+      "pilot_50k_checkpoint_selection": "the already-completed diagnostic used held-out official Inter-X val and released Interact2AR JointsFull FID; retained only as historical evidence for that frozen 50k result",
+      "full_300k_checkpoint_selection": "fixed official-test replications 0,1,2 with common50 on the five-checkpoint shortlist [80k current completed test best, 220k/260k/280k top late periodic-validation candidates, 300k endpoint], selecting the lowest mean released Interact2AR JointsFull FID; this is test-guided selection and must never be described as unbiased held-out validation",
+      "incremental_test3_selection": {
+        "previous_exhaustive_session_id": 76685,
+        "previous_exhaustive_status": "stopped_recoverably_after_steps10_to110_complete_when_user_flagged_runtime; no artifacts deleted",
+        "shortlist": [80000, 220000, 260000, 280000, 300000],
+        "shortlist_low_gpu0_session_id": 50436,
+        "shortlist_high_gpu1_session_id": 70954,
+        "status": "complete; all five candidates have exactly official-test replications 0,1,2 and canonical provenance validation passed",
+        "evaluated_through_step": 110000,
+        "provisional_selected_step": 300000,
+        "provisional_selected_mean_joints_full_fid": 0.10356079813793902,
+        "completed_test3_mean_fid": {
+          "10000": 0.27856411741725157,
+          "20000": 0.2080026629671939,
+          "30000": 0.20560897134948183,
+          "40000": 0.1917129950168288,
+          "50000": 0.1993903194791784,
+          "60000": 0.15908840387861764,
+          "70000": 0.266571988203296,
+          "80000": 0.1255350679745959,
+          "90000": 0.17450228101222365,
+          "100000": 0.14827093139173542,
+          "110000": 0.13360039057057804
+          ,"220000": 0.11516627644571524
+          ,"260000": 0.11973901861425418
+          ,"280000": 0.11064817957624011
+          ,"300000": 0.10356079813793902
+        },
+        "canonical_runner": "tools/run_no_shape_test3_shortlist.sh",
+        "selector": "tools/select_no_shape_checkpoint_on_test3.py",
+        "canonical_output": "output/hhc_no_shape_v4_test3_shortlist_selection.json",
+        "shard_outputs": [
+          "output/hhc_no_shape_v4_test3_shortlist_low.json",
+          "output/hhc_no_shape_v4_test3_shortlist_high.json"
+        ],
+        "replications": [0, 1, 2],
+        "selection_metric": "mean JointsFull FID",
+        "disclosure": "test-guided; unbiased heldout selection claim disallowed"
+      },
+      "formal_20rep_execution": {
+        "status": "complete; all 20 main and all 20 multimodality generations and legacy/joint scores finished, strict shard manifest merged and final result card built",
+        "runner": "tools/run_hhc_no_shape_joint_evaluation_two_gpu.sh",
+        "shards": [[0, 10], [10, 20]],
+        "concurrency_contract": "each worker writes only its disjoint replication files and run_manifest_START_END.json; after both exit successfully, tools/merge_fair_interx_shard_manifests.py validates identical model/protocol/provenance and writes canonical run_manifest.json",
+        "metrics": "legacy 672D FID/R-Precision/Matching/Diversity/MModality plus released Interact2AR JointsFull/JointsBody/JointsHands FID/R-Precision/Matching/Diversity/MModality",
+        "sampling": "sample_intra_cas, 50 outer steps, T=0.5, CFG=3.5, batch size 32",
+        "historical_measured_runtime_per_replication": {
+          "main_mean_seconds": 1302.1045043659979,
+          "multimodality_mean_seconds": 2339.596054324554
+        },
+        "measured_dual_gpu_generation_wall_hours": 10.5,
+        "session_id": 36948,
+        "selected_checkpoint_step": 300000,
+        "selected_test3_mean_joints_full_fid": 0.10356079813793902,
+        "validation": "canonical merged run manifest, legacy summary, three-wrapper joint summary, paper acceptance, exact-repeat collapse audit and result card all report complete",
+        "result_card": "output/hhc_no_mgt_shape_full300k_result_card.json",
+        "joints_full": {"FID": 0.09810583541339142, "Matching": 3.1201840092551034, "R1": 0.4489091981132076, "R2": 0.6567806603773586, "R3": 0.7680424528301887, "Diversity": 9.22477445602417, "MModality": 0.0570109024643898},
+        "acceptance": "fails comprehensive Interact2AR paper gate: FID and Diversity pass, retrieval/Matching narrowly miss and MModality collapses"
+      },
+      "masked_only_training_loss_followup": {
+        "status": "running_on_gpu0_since_2026-09-09T17:39:10+01:00",
+        "purpose": "test whether all-valid-token supervision causes the sharply peaked conditional token distribution and late MModality collapse",
+        "single_factor": "training_loss_contract historical_all_valid -> paper_masked_only",
+        "frozen_factors": "same no-shape historical 1024D/16-head/7+2+9 topology, raw12288 VQ, Inter-X/cache, paper kinematic mask ratios, optimizer, seed, 38-token window and sample_intra_cas common50 T0.5 CFG3.5",
+        "run_dir": "output/t2i_trans/2026-09-09-17-39-10_hhc_historical_paper_mask_no_shape_masked_only_pilot50k_seed114514_v1",
+        "wandb_run_id": "5ll47jok",
+        "validation_interval": 10000,
+        "diagnostic_endpoint": 50000,
+        "finalizer": "tools/finalize_hhc_no_shape_masked_only_pilot.sh",
+        "comparison": "tools/compare_hhc_no_shape_masked_only_pilot.py; matched 10k..50k validation trajectory and selected-checkpoint screen, never test reporting",
+        "conditional_continuation": "tools/continue_hhc_no_shape_masked_only_to_300k.sh GPU; refuses launch unless the comparison is complete, every promotion check passes, the atomic 50k checkpoint exists, the selected GPU is free, and train_t2i_trans.py's built-in strict resume verifies every manifest-bound source and recipe field",
+        "promotion_rule": "continue this exact arm to 300k only if selected validation FID/Matching/R1-R3 remain within preregistered tolerances and diagnostic MModality is not lower than the matched all-valid control"
+      },
+      "joint_validation_self_score": "output/interact2ar_joint_validation_gt_selfscore.json; GT-as-prediction gives numerical-zero FID for JointsFull/Body/Hands (absolute error <=8.5e-9)",
+      "joint_validation_candidates_so_far": {
+        "10000": {
+          "JointsFull_FID": 0.4682886776679851,
+          "top1": 0.3639705882352941,
+          "diversity": 9.150459289550781,
+          "status": "complete"
+        },
+        "20000": {
+          "JointsFull_FID": 0.5587447207588525,
+          "top1": 0.3805147058823529,
+          "diversity": 9.203598976135254,
+          "status": "complete"
+        },
+        "30000": {
+          "JointsFull_FID": 0.3393452745007579,
+          "top1": 0.37316176470588236,
+          "diversity": 9.264599800109863,
+          "status": "complete"
+        },
+        "40000": {
+          "JointsFull_FID": 0.4236753158873938,
+          "top1": 0.4172794117647059,
+          "diversity": 9.597455978393555,
+          "status": "complete"
+        },
+        "50000": {
+          "JointsFull_FID": 0.36612634637333485,
+          "top1": 0.3915441176470588,
+          "diversity": 9.285669326782227,
+          "status": "complete"
+        },
+        "selected_step_by_preregistered_JointsFull_FID": 30000,
+        "selected_validation_fid": 0.3393452745007579,
+        "selection_manifest": "output/hhc_no_shape_v4_pilot50k_validation_selection.json"
+      },
+      "comparison_warning": "the 2026-09-02 shape-conditioned run's online validation used 10 steps and T=0; its checkpoint-name FID is not a causal comparison to this common-50 T=0.5 run. Any shape/no-shape conclusion requires replay under the same frozen common-50 requests",
+      "mmodality_mechanism_diagnosis": "docs/hhc_mmodality_shape_condition_diagnosis.md; shape is verified present in both text-conditional and paper CFG reference branches, and the current hypothesis is deterministic shape-cue sharpening rather than an evaluation wiring failure",
+      "training_comparison_warning": "the retained shape-conditioned run used historical_test_side_effect validation while this pilot uses paper_isolated_common; validation RNG isolation changes the subsequent training trajectory, so even common50 test replay plus budget matching would not by itself make the existing pair a strict shape-only causal ablation",
+      "manifest_differences_vs_retained_shape_run": {
+        "intended_model_factor": "shape true -> false",
+        "training_validation_contract": "historical_test_side_effect -> paper_isolated_common",
+        "periodic_validation_sampler": "10 steps/T=0 -> 50 steps/T=0.5",
+        "training_budget": "shape-conditioned reference completed 300k/selected 260k; no-shape completed its 50k pilot/selected 30k for the running diagnostic test and is now continuing the exact same training state to 300k for a sufficient-budget result",
+        "causal_followup_if_warranted": "train a matched shape-on control and no-shape arm with identical seed, budget, isolated validation, common50 evaluation and all other manifests"
+      },
+      "post_50k_finalizer": "tools/finalize_no_shape_control_common50.sh; official-val checkpoint selection followed by 20-rep JointsFull/Body/Hands scoring and fail-closed paired comparison to the retained shape-conditioned common-50 HHC result; this 50k-vs-260k comparison is explicitly diagnostic_unmatched_training_budget and cannot support a causal architecture-ablation claim",
+      "post_finalizer_result_card": "tools/build_hhc_no_shape_diagnostic_result_card.py; fails closed unless the 20-rep summary, paper gate, paired comparison and repeat-collapse diagnostic all complete, and permanently records that the current comparison is not a causal shape-condition ablation",
+      "post_300k_finalizer": "tools/finalize_no_shape_full300k_common50.sh; after a normal latest-000300000 endpoint and finished online W&B audit, completes the user-directed three-replication official-test JointsFull-FID selection across all 30 saved checkpoints, then runs the 20-rep joint evaluator, performs a disclosed noncausal comparison to the retained shape-conditioned reference, and builds output/hhc_no_mgt_shape_full300k_result_card.json",
+      "post_300k_selector_contract": "tools/select_no_shape_checkpoint_on_test3.py is resumable and hash-binds each of test replications 0,1,2, their replayed raw GT, generation, joint score and checkpoint; step30 reuses its byte-identical formal generations. The output permanently sets selection_is_test_guided=true and unbiased_heldout_selection_claim_allowed=false",
+      "post_test_decision_gate": {
+        "if_all_joint_acceptance_metrics_pass": "retain the 30k pilot as numerical evidence, while still disclosing unmatched training budget and GT-first-frame protocol differences",
+        "if_mmodality_improves_but_joint_quality_or_retrieval_fails": "run matched shape-on and no-MGT-shape arms with identical training budget and validation/RNG contract before making a causal shape-conditioning claim; do not substitute temperature or sampling-step tuning",
+        "if_mmodality_does_not_materially_improve": "do not spend a full training budget on this factor; proceed to the preregistered optimization-based AMASS shape augmentation once licensed donor assets are present",
+        "temporary_execution_hold": "superseded by the user's explicit 2026-09-08 instruction to start immediately; the 50k manifest was frozen before the exact in-place continuation began"
+      },
+      "completion_evidence_gate": "before checkpoint selection, require latest-000050000.ckpt structural/numerical audit and completed online W&B history containing train/val metrics plus gradient and weight norms through optimizer step 50000",
+      "completion_evidence": "both gates passed: output/hhc_no_shape_v4_pilot50k_final_checkpoint_audit.json and output/hhc_no_shape_v4_pilot50k_wandb_history_audit.json; W&B remote state is finished and all required finite train/val metrics reach the required endpoint",
+      "supersedes_failed_run": "v3 stopped after its 10k main validation because validation_mm_repeats=3 cannot provide the evaluator's required 10 pairs; v4 uses 11 repeats and startup now rejects invalid values 2..10",
+      "completed_50k_diagnostic_20rep_joint_result": {
+        "scope_warning": "complete 20-rep result for the 30k checkpoint selected from a 50k diagnostic run; this is not the final 300k result and cannot support a causal shape-conditioning claim because training budget and validation-RNG contracts differ",
+        "shape_conditioned_common50": {
+          "mean_fid": 0.15461405335224043,
+          "mean_matching": 3.58100426197052,
+          "mean_r_precision": [
+            0.4413325471698113,
+            0.6327633647798742,
+            0.7372248427672957
+          ],
+          "mean_diversity": 9.095139026641846,
+          "mean_multimodality": 0.04259161092340946
+        },
+        "no_shape_legacy_672d_common50": {
+          "mean_fid": 0.41189799454023446,
+          "mean_matching": 3.798772943019867,
+          "mean_r_precision": [
+            0.3985259433962264,
+            0.5860259433962263,
+            0.694516509433962
+          ],
+          "mean_diversity": 8.946716117858887,
+          "mean_multimodality": 0.2117895796895027
+        },
+        "no_shape_joint_full_common50": {
+          "mean_fid": 0.2019194011930246,
+          "mean_matching": 3.3166682812402835,
+          "mean_r_precision": [
+            0.4233195754716982,
+            0.6265625,
+            0.7404775943396226
+          ],
+          "mean_diversity": 9.054264688491822,
+          "mean_multimodality": 0.2078231953084469
+        },
+        "paper_acceptance": "fails: JointsFull and JointsBody pass FID plus all three wrappers pass GT-distance-to-Diversity, but retrieval, MM_Dist and MModality fail; JointsHands FID also fails. A fair paper-superiority claim additionally remains unavailable because the Interact2AR paper row is GT-first-frame conditioned",
+        "paired_shape_conditioned_interpretation": "removing MGT shape significantly improves JointsFull MModality by +0.15916 (20/20 replications, Holm-corrected p=4.01e-5) and improves GT-distance-to-Diversity, but significantly worsens FID, Matching and R1/R2/R3. Continue to the preregistered 300k sufficient-budget result before deciding",
+        "result_card": "output/hhc_no_mgt_shape_diagnostic_result_card.json"
+      }
+    },
+    {
+      "stage": 2,
+      "name": "optimization_based_shape_augmentation",
+      "status": "deferred_by_user_until_dataset_handoff",
+      "current_training_dependency": "none; this stage is not part of or a prerequisite for the active no-shape 300k continuation",
+      "final_augmented_samples_per_training_arm": 6238,
+      "positive_contact_timing_optimization_samples": 5868,
+      "explicit_zero_timing_random_fallback_samples": 370,
+      "shards": 2,
+      "donor_contract": "configs/interx_shape_augmentation/humanml3d_amass_smplx_donor_contract_v1.json",
+      "licensed_asset_handoff": "docs/humanml3d_amass_shape_asset_handoff.md",
+      "asset_audit": "output/humanml3d_amass_shape_asset_audit.json: an exhaustive search of /mnt/8T-HDD and /home/wenning found 0/8805 required AMASS source sequences; the installed HumanML3D parquet/cache contains only 263D processed motion, not AMASS beta/gender; licensed SMPL+H male/female models and official correspondence are also missing",
+      "inventory_builder": "tools/build_humanml3d_amass_shape_inventory.py; implemented and synthetic pass/fail-closed tests passed",
+      "transfer_preparer": "tools/prepare_humanml3d_amass_shape_transfer.py; renders neutral 16-beta SMPL+H meshes by gender and freezes separate official SMPL-X transfer configs; transfer batch size is forced to 1 to avoid the released writer's unsliced-batch pkl ambiguity",
+      "transfer_collector": "tools/collect_humanml3d_amass_smplx_donors.py; recomputes official deformation targets, enforces <=1cm vertex RMSE and finite 10D SMPL-X beta, then reports covariance/effective rank and bidirectional nearest-neighbour distances against the verified 118-identity Inter-X train pool",
+      "plan_integration": "tools/prepare_interx_shape_augmentation_plan.py now accepts a hash-bound external AMASS-SMPL-X donor manifest while preserving the original split, motion, caption, contact timing, crop, RNG and optimizer contracts; target SMPL-X shapes are deduplicated again after transfer",
+      "pipeline_runner": "tools/run_humanml3d_amass_shape_donor_pipeline.py; resumably executes asset audit -> train-only identity inventory -> neutral SMPL+H meshes -> official female/male transfer -> <=1cm RMSE collector -> deterministic Inter-X augmentation plan -> plan audit, and fails closed before GPU work when licensed assets are incomplete",
+      "augmentation_and_training_runner": "tools/run_humanml3d_amass_shape_augmentation.sh; runs a same-AMASS-donor 25-sample nearest/Volumetric numerical-and-speed gate, uses VolumetricSMPL only when it is physically safe and strictly faster, otherwise validates and falls back to the original nearest backend, builds both the exact 6238-sample random-shape-only overlay and the 5868 optimized-positive + 370 random-zero selective overlay, then sequentially launches both matched online-W&B no-MGT-shape 50k arms",
+      "speed_gate_contract": "nearest and VolumetricSMPL must use the identical 25 ordered samples, iterations, learning rate, fine-stage boundary, seed/seed policy, temporal mask, foot-mask policy, contact reduction, optimization variables, plan/contact/source hashes and mode; backend-only query/execution parameters may differ. output/interx_shape_aug_volumetric_fast_selective_pilot25_gate_v3_fair_speed_audit.json correctly rejects the earlier 120-step versus 200-step comparison, so its former 1.221x number is not a valid speed claim. The future AMASS runner already applies the shared 120-step common array to both pilots.",
+      "restart_contract": "run_interx_shape_augmentation.py already resumes completed per-sample triples and safely recomputes only interrupted partial triples; select_interx_shape_optimization.py likewise resumes hash-bound per-sample projections. The outer runner now reuses a completed 25-sample gate only after verifying schema/status, every artifact size/SHA-256, the current gate implementation hash and pass/check consistency; completed overlays are fully contract-validated rather than rewritten.",
+      "verification": "13 focused checks passed in New_MMM: 5 official-transfer preparation/runtime checks and 8 inventory/collector/external-plan checks, including gender-matched donor coverage distances; syntax compilation for the complete pipeline and git diff --check also pass",
+      "verified_old_pool": {
+        "identities": 118,
+        "female": 59,
+        "male": 59,
+        "beta_covariance_effective_rank": 2.840834335241944
+      },
+      "old_donor_pool": "118 unique Inter-X train identities; retained only as a recoverable fallback and not eligible for the final experiment",
+      "new_donor_pool": "deduplicated HumanML3D-train AMASS identities after official SMPL+H-to-SMPL-X transfer",
+      "optimization_target": "the shape-swapped copy of each GT training motion; optimization only repairs contact mismatch introduced by the new body shapes and must not optimize or relabel the original GT motion",
+      "contact_contract": "manual frame-level timing plus LLM contact-region labels; nearest-region logic, contact loss, penetration loss and all other original-MMM optimizer semantics stay unchanged",
+      "ground_contract": "temporarily floor-align each person before optimization because raw Inter-X translation is pelvis-centred, then restore the original Inter-X coordinate convention before materialization",
+      "volumetric_smpl_scope": "distance/geometry-query backend only; shared-backend reuse has been shown bitwise equal to fresh-backend execution, and promotion additionally requires a measured speed improvement",
+      "post_optimization_projection": "restore source rotations for SMPL-X joints 0,1,2,4,5,7,8,10,11 and retain only the time-constant mean root-translation delta, so lower-body temporal motion is preserved",
+      "selection": "against the frozen random-shape input, accept the projected candidate only if contact mismatch strictly improves by more than 1e-8, penetration does not increase beyond 1e-8, and absolute skate delta is <=2e-6; otherwise use the random-shape input byte-for-byte",
+      "optimization_evidence": [
+        "output/interx_shape_optimization_ground_contract_audit.json",
+        "output/shared_volumetric_backend_equivalence_audit.json",
+        "tools/select_interx_shape_optimization.py"
+      ]
+    },
+    {
+      "stage": 3,
+      "name": "matched_shape_augmentation_training",
+      "status": "pending",
+      "diagnostic_steps": 50000,
+      "mgt_shape_condition": false,
+      "vq_shape_condition": true,
+      "arms": [
+        "frozen no-augmentation no-MGT-shape baseline",
+        "6238 HumanML3D-train AMASS random-shape-only samples",
+        "the same 6238 donor assignments with 5868 optimized-selective positive-timing samples plus 370 byte-identical random zero-timing samples"
+      ],
+      "model_difference_vs_stage_1": "HumanML3D-train AMASS shape-augmentation training overlay/token cache only; MGT remains no-shape in all arms, while random-only versus optimized-selective isolates the effect of contact optimization from beta-distribution expansion",
+      "training_entrypoint": "tools/run_hhc_no_shape_amass_aug_pilot.sh GPU [optimized_selective|random_only]; refuses launch unless the official-transfer AMASS pipeline, exact 6238-sample plan and requested immutable materialization are complete; both modes use online W&B. tools/resolve_mgt_diagnostic_resume.py makes reboot recovery fail-closed: no prior run starts new, exactly one run below 50k resumes its highest atomic latest checkpoint in place and preserves the W&B run id, and a run is considered complete only when both latest-000050000 and model-000050000 validation checkpoints exist; duplicate or ambiguous runs are rejected.",
+      "evaluation_entrypoint": "tools/finalize_amass_shape_augmentation_matrix.sh; reuses the frozen baseline 20-rep result, selects each augmented checkpoint only on the same held-out validation request, evaluates each with the same joint common50 20-rep protocol, reports baseline-vs-random, baseline-vs-optimized and random-vs-optimized paired comparisons, and invokes tools/build_amass_shape_augmentation_result_card.py",
+      "result_card": "output/hhc_amass_shape_augmentation_result_card.json; fail-closed on incomplete 20x1696 summaries, stale replication-set digests, changed paired-comparison implementation, non-matched training arguments, failed online-W&B/checkpoint audits, changed selected checkpoints, invalid 6238-sample overlays, missing Interact2AR acceptance, or stale 100x30 MM H5/repeat-collapse diagnostics. It records all joint metrics, exact-pair collapse/unique repeats/raw pair RMS for every arm, all three paired comparisons and whether the optimized arm numerically beats every Interact2AR paper metric."
+    },
+    {
+      "stage": 4,
+      "name": "joint_only_evaluation",
+      "status": "pending",
+      "replications": 20,
+      "evaluators": [
+        "JointsFull",
+        "JointsBody",
+        "JointsHands"
+      ],
+      "primary_shape_metrics": [
+        "Diversity",
+        "MModality"
+      ],
+      "paired_statistics": "tools/compare_interact2ar_joint_augmentation_paired.py; same frozen request/GT/evaluator provenance, bootstrap 95% CI, paired Wilcoxon, Holm correction",
+      "finalizer": "tools/finalize_no_shape_amass_aug_joint.sh; evaluates only the new AMASS-augmented arm and reuses the already frozen no-shape common50 baseline, with identical official Inter-X validation selection, test requests and original Inter-X inference normalization",
+      "acceptance": "comprehensively beat the Interact2AR autoregressive Table 2 row"
+    },
+    {
+      "stage": 5,
+      "name": "interhuman_adaptation_training_evaluation",
+      "status": "blocked_by_stages_1_to_4",
+      "baseline_policy": "do not rerun the InterHuman baseline already running on the user's other server",
+      "official_asset_status": "preflight_pass",
+      "official_asset_evidence": "output/interhuman_official_assets_audit.json",
+      "adaptation_contract": "configs/interhuman_hhc_adaptation_v1.json",
+      "representation_implementation": "utils/interhuman_representation.py",
+      "representation_tests": "tests/test_interhuman_representation.py",
+      "official_preprocessing_adapter": "dataset/interhuman_hhc_adapter.py",
+      "vq_interface": "models/vqvae_sep3_interhuman.py",
+      "adapter_preparation_status": "official source-hash-bound 262D-per-person preprocessing with coordinate-anchor choice kept distinct from final person order, deterministic eight-variant paired 524D VQ window dataset, paired 320/192/12 three-quantizer VQ full/encode/decode interface, exact one-token-triple-per-dyad MGT binding, term-by-term official InterMask per-person VQ-loss parity, hash-bound InterCLIP batch/alignment/metric wrapper, fixed val-only checkpoint-selection requests, true-length VQ reconstruction FID/R-Precision/MPJPE validation, hash-bound official InterMask VQ reconstruction exporter, gated deterministic online-W&B VQ training entrypoint, official-support MGT text/crop/anchor/order dataset with post-crop online VQ tokenization and exact step-resumable epoch/draw sampler, strict main/MM generated-H5 schemas, scorers and 20-rep aggregator complete; the real 300-frame paired VQ -> 75x3-token -> HHC Transformer forward path is covered, the unchanged common50 sampler has a tested official floor-length/decode/zero-pad bridge, and a real masked training objective backpropagates only into the Transformer. Paper versus historical tail-token semantics are explicit and tested rather than treating an online-VQ padding code as historical END. In-memory periodic MGT validation now reuses the frozen 480-sample official InterCLIP metric path and preserves RNG state, including a source-bound frozen val-only 100-prompt x 11-repeat MModality diagnostic. A strict manifest-bound loader reconstructs the selected HHC VQ and MGT for downstream export without guessing architecture. The gated MGT pilot is preregistered and has a real training entrypoint with the recovered 1024/16-head/7+2+9 topology, paper mask ratios, common50 validation, exact optimizer-step resume and mandatory online telemetry. Resume RNG restoration now occurs after CLIP/InterCLIP/W&B construction and DataLoaders use isolated generators, eliminating a previously hidden continuation-mask drift. It stops cleanly at the preregistered 50k decision point and can continue the identical run to 300k without reinitialization. Formal main and 100x30 MM H5 export is resumable, writes motion chunks durably before completion markers, is schema-compatible with the frozen scorers and uses an InterHuman-only per-sample uint64-seeded sampler proven invariant to batch grouping; the shared Inter-X sampler and builder remain on the original class. The finalizer first verifies that the supplied checkpoint is the immutable official-val-FID selection recorded by a completed training manifest, then runs all 20 main/MM replications and the strict aggregator. Training provenance includes the InterHuman subclass and model builder; every generated H5 also records the exact exporter and generation-bridge source hashes, and aggregation rejects source drift across replications. The request-local sampler is also bit-identical to the unchanged base sampler for a single request with the same seed.  Official-val main FID sampling now uses the same frozen per-request repeat-0 seed contract as formal export. Every training event carries an explicit optimizer-step axis, and formal evaluation is gated by a remote-finished online-W&B audit whose InterHuman-specific profile requires train loss/valid-masked-per-channel accuracy, gradients, weights, clipping, throughput and all val loss/FID/R-Precision/Matching/Diversity/MModality streams through 300k. The VQ schedule is now one immutable 30k cosine run with a clean 10k decision pause (rather than the previous contradictory 10k zero-LR endpoint); downstream MGT rejects pilot-only/non-selected VQs and requires a source-bound, remote-finished 30k InterHuman-VQ W&B audit. The InterHuman VQ/MGT W&B profiles are exact-name checked against every emitted required metric, including VQ optimizer throughput, so a typo cannot silently make the later remote audit impossible. The released InterMask VQ exporter now supports the frozen 480-sample official val set (without touching test), and a separate namespace-safe scorer uses the identical InterCLIP metric core plus MPJPE/feature error for the 10k VQ decision baseline. The selected full-endpoint HHC VQ also has an independent frozen-val rescorer and a request/evaluator-identical comparison card against the released InterMask VQ, with explicit metric directions and no test-set selection. A foreground-only VQ runner now enforces completed Inter-X shape acceptance, performs the clean 10k pause/30k same-run resume, and after full training automatically audits W&B, rescores selected HHC and released InterMask VQs, and builds the matched comparison without deleting or silently overwriting artifacts. A matching foreground-only MGT runner enforces the accepted Inter-X and completed/audited selected VQ prerequisites, supports 50k pilot, resume-pilot, same-run continuation to 300k, and resumable formal common50 finalization; the VQ runner also supports atomic pilot recovery after reboot. All 106 focused CPU/static contract tests pass. The VQ and MGT pilots remain deliberately unlaunched behind the Inter-X gate",
+      "vq_training_entrypoint": "train/train_vq_interhuman.py; preregistration-locked args, explicit --confirm-after-interx gate, deterministic epoch batch sampler with exact step-resume suffix, complete EMA quantizer state/RNG/optimizer atomic checkpoints, fail-fast finite losses, online W&B loss/perplexity/codebook/gradient/weight/throughput/memory telemetry, full val-window losses and 480-request official InterCLIP validation every 1000 optimizer steps",
+      "vq_downstream_loader": "utils/interhuman_artifacts.py:load_hhc_interhuman_vq; reconstructs model arguments only from the immutable training manifest, requires checkpoint/manifest contract identity, optionally rehashes every training source, loads weights strictly, freezes the model, and returns hash/selection provenance",
+      "mgt_data_contract": "configs/interhuman_mgt_data_contract_v1.json and dataset/interhuman_mgt.py; 5637 eligible train interactions x original/LR records, deterministic per-draw caption/crop/coordinate-anchor/output-order choices, processing and padding before frozen VQ encoding, no pre-crop token cache because it changes convolutional boundary tokens, and released floor(length/4) valid-token policy",
+      "mgt_generation_bridge": "utils/interhuman_mgt_evaluation.py; converts processed lengths with released floor(length/4), calls the unchanged HHC sample_intra_cas using the exact-multiple bridge, decodes only valid code IDs, and zero-pads the sub-four-frame remainder exactly like the official InterMask evaluator",
+      "mgt_periodic_validation_contract": "utils/interhuman_mgt_evaluation.py:evaluate_interhuman_generator; consumes exactly five frozen 96-sample val batches, reuses the released batch-local InterCLIP FID/Matching/R-Precision/Diversity equations, rejects non-finite results, and restores Python/NumPy/Torch RNG state",
+      "mgt_validation_mmodality_requests": "output/interhuman_validation_mm_requests/validation_mm.json; sha256=f50f4995faa5dc0f6b0038ba48435400167c7b5677c37df9900ad11354d0a2d7, first 100 prompts of the already-seeded frozen validation order, 11 repeats and 10 official evaluator pairs; val diagnostic only and never formal test reporting",
+      "mgt_training_batch_contract": "utils/interhuman_mgt_training.py; freezes the online tokenizer, applies the historical random-replacement pipeline with only the paper sorted kinematic mask ratios changed, uses historical all-valid NLL, and reports valid/masked/per-channel accuracy",
+      "mgt_pilot_contract": "configs/interhuman_mgt_pilot_v1.json; gated 50k decision point within a resumable 300k run, micro-batch 8 x accumulation 8, exact selected high-performing historical HHC topology, official-val common50 checkpoint selection and online W&B train/validation/gradient/weight telemetry",
+      "mgt_training_entrypoint": "train/train_mgt_interhuman.py; refuses launch before the Inter-X/VQ gate, strictly loads the manifest-bound selected VQ, excludes frozen VQ weights from MGT checkpoints, resumes only at complete optimizer steps with sampler/optimizer/scheduler/RNG/W&B identity, performs micro8 x accumulation8 training, rolling full-state checkpoints, deterministic frozen-val loss/valid-masked-per-channel accuracy plus official 480-request common50 FID/Matching/R-Precision/Diversity validation, and val-FID-only best selection; --run-until-step permits only the preregistered 50k decision or 300k endpoint, so a healthy 50k pilot continues in place rather than restarting",
+      "mgt_formal_exporter": "tools/export_hhc_interhuman.py; strictly loads the manifest-bound MGT+VQ, supports resumable 1056-sample main and 100-prompt x 30-repeat MM H5, locks sample_intra_cas/50/T0.5/CFG3.5, writes the exact frozen scorer schemas, and uses SHA256-derived per-sample seeds whose outputs are invariant to generation batch size",
+      "mgt_formal_finalizer": "tools/finalize_hhc_interhuman_common50.sh; sequentially resumes/exports, scores and verifies all 20 frozen main and MM replications on one GPU, then invokes the strict 20-rep aggregator",
+      "official_split_counts": {
+        "train": 6022,
+        "val": 580,
+        "test": 1177,
+        "split_union": 7779,
+        "processed_motion_pairs": 7777,
+        "split_ids_without_processed_motion": [
+          3945,
+          4106
+        ]
+      },
+      "official_text_effective_counts": {
+        "train": 5637,
+        "val": 547,
+        "test": 1098,
+        "reason": "released loader applies min_length=15 and skips UTF-8 decode failures; blank CRLF annotation lines remain valid empty-caption choices. Formal batch_size=96/drop_last evaluates 1056 test pairs"
+      },
+      "normalization": "InterMask and CoShMDM InterHuman global_mean/global_std are byte-identical; hashes are frozen in the asset audit",
+      "superseded_invalid_request_manifests_retained": [
+        "output/interhuman_fair_requests/manifest.json: omitted min_length=15",
+        "output/interhuman_fair_requests_v2/manifest.json: retained caption trailing whitespace removed by released __getitem__.strip"
+      ],
+      "frozen_evaluation_requests": "output/interhuman_fair_requests_v3/manifest.json; replay-verified 20 hash-bound replications with 1056 official-loader-eligible test pairs each",
+      "frozen_evaluation_request_set_sha256": "3846b247ce917276b60db366eec9a4787ec859e53000b9b827e22524f2c36250",
+      "frozen_mmodality_requests": "output/interhuman_fair_mm_requests/manifest.json; 20 replications, each 100 prompts selected from the full 1098-entry effective order with 30 repeats and 10 evaluator pairs",
+      "frozen_mmodality_request_set_sha256": "73bf3a1ba8fd47e73bff27e85a6fbd77345d40f44198808524836430bd57023b",
+      "frozen_validation_requests": "output/interhuman_validation_requests/manifest.json; one deterministic official-val-only 480-sample request set at batch_size=96/drop_last, reserved for periodic validation and checkpoint selection so formal test replications are never used for selection",
+      "generation_and_main_scoring_contract": "dataset/interhuman_generated_h5.py and tools/score_fair_interhuman_main.py; exact request/stat/order binding, released InterCLIP source, batch-local R-Precision, FID/Matching/Diversity and optional fail-closed HHC common50 metadata gate implemented and CPU-tested",
+      "official_vq_reconstruction_reference": "tools/export_official_intermask_interhuman_vq_reconstruction.py; loads the released InterMask best_fid.tar strictly from hash-bound original VQ sources, reconstructs each person at true length on the same frozen requests, writes a non-overwriting LZF H5, then reuses the identical HHC main scorer; CPU preflight strictly loaded all 43,031,208 parameters from epoch 46 / iteration 20,608 and is recorded at output/official_intermask_interhuman_vq_preflight.json, while the large GPU reconstruction export is intentionally deferred until the Inter-X formal evaluation finishes",
+      "multimodality_generation_and_scoring_contract": "dataset/interhuman_generated_h5.py and tools/score_fair_interhuman_mm.py; exact 100-prompt x 30-repeat normalized float32 H5 schema, SHA256-derived per-repeat seeds, request/stat/order binding, released InterCLIP, official 10-pair scale=6/divisor=2 MModality and optional fail-closed HHC common50 metadata gate implemented and CPU-tested",
+      "formal_metric_aggregator": "tools/aggregate_fair_interhuman_metrics.py; fails closed unless all 20 main and 20 MM score files are complete, request-bound, finite, generated by the same checkpoint/VQ/model config/common50 sampler identity, scored by the same official evaluator, and generation hashes are reverified; reports official population-std 95% CIs",
+      "execution_policy": "prepare the HHC adapter and evaluator contract now, but do not launch InterHuman training until the Inter-X joint acceptance and shape-augmentation stages finish"
+    }
+  ]
+}

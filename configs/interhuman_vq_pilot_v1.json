@@ -1,0 +1,107 @@
+{
+  "schema": "hhc_interhuman_vq_pilot_v1",
+  "status": "preregistered_not_launched",
+  "execution_gate": {
+    "launch_now": false,
+    "reason": "Do not start InterHuman GPU training until the active Inter-X formal evaluation and shape-augmentation stages finish."
+  },
+  "data": {
+    "train_split": "official InterHuman train only",
+    "validation_split": "output/interhuman_validation_requests/manifest.json; official val only",
+    "test_use_during_training": false,
+    "representation": "normalized paired [person1_262,person2_262]=524D",
+    "window_size": 64,
+    "window_stride": 10,
+    "train_pairs_with_64_frame_support": 3242,
+    "train_windows_across_8_official-support_variants": 458928,
+    "variants": "left/right swap x coordinate anchor x final person order",
+    "normalization_mean_sha256": "2f97b88889c773551cd597c32e88bfa070c2fb1721a992a80bfb7cf4c22e03b6",
+    "normalization_std_sha256": "dd5988b979e9803786ab497f5945316c2d52b97c90b593d0427220fd49b03e4b"
+  },
+  "model": {
+    "implementation": "models/vqvae_sep3_interhuman.py",
+    "feature_partition": [512, 12],
+    "latent_partition": [384, 128],
+    "code_dimension_total": 512,
+    "codebooks": 2,
+    "codes_per_codebook": 1024,
+    "temporal_downsample": 4,
+    "width": 512,
+    "depth": 2,
+    "activation": "relu",
+    "parameters": 22337548,
+    "rationale": "First pilot keeps released InterMask's 1024-code, 512D, down_t=2, width=512 and depth=2 scale while retaining HHC's separate body/root token structure."
+  },
+  "optimization": {
+    "pilot_optimizer_steps": 10000,
+    "full_optimizer_steps": 30000,
+    "micro_batch_pairs": 64,
+    "gradient_accumulation": 1,
+    "effective_batch_pairs": 64,
+    "batch_rationale": "Do not use gradient accumulation with the EMA-reset quantizers: each microbatch updates codebook EMA state, so accumulation would not reproduce one larger batch. Increase the physical batch only after a measured memory preflight.",
+    "optimizer": "AdamW",
+    "learning_rate": 0.0002,
+    "betas": [0.9, 0.99],
+    "weight_decay": 0.0,
+    "warmup_steps": 1000,
+    "schedule": "linear warmup then cosine to zero at the fixed 30000-step full endpoint; the 10000-step pilot is a pause, not a scheduler endpoint",
+    "gradient_clip_norm": 1.0,
+    "precision": "bf16 when supported, otherwise fp32",
+    "seed": 123
+  },
+  "loss": {
+    "implementation": "utils/interhuman_vq_loss.py",
+    "reconstruction": "SmoothL1 on each person's 0:258 features",
+    "person_reduction": "mean of two people",
+    "commitment_count": "once for the joint two-codebook VQ",
+    "weights": {
+      "commitment": 0.02,
+      "explicit_position": 1.0,
+      "position_velocity": 100.0,
+      "bone_length": 5.0,
+      "rotation_geodesic": 0.01,
+      "foot_sliding": 500.0
+    }
+  },
+  "automatic_validation": {
+    "interval_optimizer_steps": 1000,
+    "request_set": "output/interhuman_validation_requests/manifest.json",
+    "samples": 480,
+    "batch_size": 96,
+    "metrics": [
+      "validation loss and every component",
+      "FID",
+      "R-Precision@1/2/3",
+      "Matching",
+      "Diversity",
+      "MPJPE metres",
+      "normalized feature MAE"
+    ],
+    "selection_metric": "lowest official-val reconstruction FID",
+    "rng_policy": "validation is observational and restores Python/NumPy/Torch/CUDA RNG and model mode"
+  },
+  "wandb": {
+    "mode": "online",
+    "required_train_metrics": [
+      "total and every loss component",
+      "per-codebook perplexity and utilization",
+      "learning rate",
+      "gradient norm",
+      "weight norm",
+      "examples/sec and optimizer steps/sec",
+      "GPU peak memory"
+    ],
+    "required_validation_metrics": "all automatic_validation.metrics"
+  },
+  "decision_after_10k": {
+    "comparison": "same frozen official-val requests against the released InterMask VQ and GT self-score",
+    "official_intermask_val_export": "tools/export_official_intermask_interhuman_vq_reconstruction.py --validation-manifest output/interhuman_validation_requests/manifest.json",
+    "shared_val_scorer": "tools/score_interhuman_vq_validation.py; 480 val requests, five released batches of 96, seed 20260130",
+    "selected_hhc_vq_rescore": "tools/evaluate_hhc_interhuman_vq_validation.py; independently reload the manifest-selected full-endpoint checkpoint and report the identical metric core",
+    "final_val_comparison": "tools/compare_interhuman_vq_validation.py; fail closed unless HHC and released InterMask scores use the same 480 requests and byte-identical evaluator provenance",
+    "if_quality_trajectory_is_healthy": "resume the same optimizer/RNG/W&B run from 10000 to the preregistered 30000-step endpoint, exceeding the released checkpoint's 20,608 optimizer-step scale, and select only by official-val FID",
+    "if_underfit_with_healthy_code_usage": "continue budget before changing capacity",
+    "if_codebook_collapse_or_quality_regression": "diagnose channel utilization and loss balance before changing code count or latent widths; do not launch an unregistered sweep",
+    "formal_test": "only after val selection; use all 20 frozen test replications and identical InterCLIP scorer"
+  }
+}
