@@ -51,9 +51,15 @@ def main():
     if not args.force and dt.datetime.now(dt.timezone.utc) < due:
         print(json.dumps({'status': 'not_due', 'not_observed': True, 'next_ordinary_observation_not_before_utc': due.isoformat()}))
         return
-    ssh = ['ssh', '-i', str(Path.home()/'.ssh/id_ed25519_newstation'), '-p', str(owner['ssh_port']),
-           '-oBatchMode=yes', '-oConnectTimeout=15', 'root@'+owner['ssh_host']]
-    result = subprocess.run(ssh+['/opt/hhc-env/bin/python -c '+shlex.quote(REMOTE)],
+    if owner['backend'] == 'edmond':
+        ssh = ['ssh', '-oBatchMode=yes', '-oConnectTimeout=15', owner['ssh_alias']]
+        interpreter = 'python3 '+shlex.quote(owner['namespace_launcher'])+' /opt/hhc-env/bin/python'
+    else:
+        assert owner['backend'] == 'runpod'
+        ssh = ['ssh', '-i', str(Path.home()/'.ssh/id_ed25519_newstation'), '-p', str(owner['ssh_port']),
+               '-oBatchMode=yes', '-oConnectTimeout=15', 'root@'+owner['ssh_host']]
+        interpreter = '/opt/hhc-env/bin/python'
+    result = subprocess.run(ssh+[interpreter+' -c '+shlex.quote(REMOTE)],
         capture_output=True, text=True, encoding='utf-8', errors='strict', timeout=180)
     assert result.returncode == 0, (result.returncode, result.stderr)
     packet = json.loads(result.stdout)
