@@ -13,6 +13,9 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument('--recovery-dir', type=Path, required=True)
     p.add_argument('--expected-launch-sha', required=True)
+    p.add_argument('--training-driver', choices=['resume_official_intergen_gpu1_cloud.py',
+                   'resume_official_intergen_single_loader_cloud.py'],
+                   default='resume_official_intergen_gpu1_cloud.py')
     a = p.parse_args()
     rec = a.recovery_dir
     assert RUN in rec.resolve().parents
@@ -25,7 +28,7 @@ def main():
     accepted = read(receipt)
     assert accepted['status'] == 'verified_full_resume_candidate'
     command = ['/workspace/intergen-official-env-py38/bin/python', '-u',
-               str(ROOT/'tools/resume_official_intergen_gpu1_cloud.py'),
+               str(ROOT/'tools'/a.training_driver),
                '--runtime-wrapper', str(ROOT/'tools/run_official_intergen_checkpointed_cloud.py'),
                '--checkpoint-receipt', str(receipt), '--event-dir', str(rec/'training_events')]
     write_new(rec/'LAUNCH.before.json', previous)
@@ -44,9 +47,14 @@ def main():
                   log_path=str(log), time=time.time(), previous_launch=str(rec/'LAUNCH.before.json'),
                   status='supervised_full_resume_pending_acceptance', supervisor_pid=os.getpid())
     launch['runtime_changes']['full_state_resume'].update(
+        wrapper=str(ROOT/'tools'/a.training_driver), wrapper_sha256=sha(ROOT/'tools'/a.training_driver),
         resume_step=accepted['step'], checkpoint_receipt=str(receipt),
         checkpoint_receipt_sha256=sha(receipt), checkpoint_sha256=accepted['sha256'],
         event_dir=str(rec/'training_events'))
+    if a.training_driver == 'resume_official_intergen_single_loader_cloud.py':
+        launch['runtime_changes']['data_loader'] = {
+            'num_workers': 0, 'reason': 'isolate observed malloc corruption during multiprocessing receive',
+            'root_cause_confirmed': False, 'rng_sequence_equivalence_claimed': False}
     atomic(RUN/'LAUNCH.json', launch)
     code = child.wait()
     write_new(rec/'trainer_exit.json', {'pid': child.pid, 'birth': identity['birth'],
