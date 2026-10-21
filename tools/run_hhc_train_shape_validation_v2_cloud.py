@@ -77,7 +77,7 @@ def main():
         def run(phase,command,gpu=False):
             check_sources()
             with (control/f'{phase}.log').open('x') as stream:
-                child=subprocess.Popen(command,cwd=ROOT,env=dict(env,CUDA_VISIBLE_DEVICES='0' if gpu else ''),
+                child=subprocess.Popen(command,cwd=ROOT,env=dict(env,CUDA_VISIBLE_DEVICES=config.get('cuda_visible_devices','0') if gpu else ''),
                     stdin=subprocess.DEVNULL,stdout=stream,stderr=subprocess.STDOUT)
                 state.update(status='running',phase=phase,child_pid=child.pid);write(status,state)
                 code=child.wait()

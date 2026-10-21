@@ -149,7 +149,7 @@ def main():
                 time.sleep(600)
             write(control/'official_release_acceptance.json',observed)
             assert sha(observed['final']['snapshot'])==observed['final']['sha256']
-            env={**os.environ,'CUDA_VISIBLE_DEVICES':'0','PYTHONPATH':'/opt/hhc-vq-deps','OMP_NUM_THREADS':'2','MKL_NUM_THREADS':'2','OPENBLAS_NUM_THREADS':'2'}
+            env={**os.environ,'CUDA_VISIBLE_DEVICES':config.get('cuda_visible_devices','0'),'PYTHONPATH':'/opt/hhc-vq-deps','OMP_NUM_THREADS':'2','MKL_NUM_THREADS':'2','OPENBLAS_NUM_THREADS':'2'}
             for index,arm in enumerate(abc['arms']):
                 legacy,baseline=unchanged();assert readiness(config,baseline,control)[0]
                 out=Path(arm['output'])

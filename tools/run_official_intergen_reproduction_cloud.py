@@ -106,7 +106,7 @@ def main():
    try:os.fsync(directory)
    finally:os.close(directory)
    state.update(status='evaluation_dispatch_intent_written',dispatch_started=True);write(status,state)
-   env={**os.environ,'CUDA_VISIBLE_DEVICES':'0','OMP_NUM_THREADS':'2','MKL_NUM_THREADS':'2','OPENBLAS_NUM_THREADS':'2','MPLBACKEND':'Agg'}
+   env={**os.environ,'CUDA_VISIBLE_DEVICES':config.get('cuda_visible_devices','0'),'OMP_NUM_THREADS':'2','MKL_NUM_THREADS':'2','OPENBLAS_NUM_THREADS':'2','MPLBACKEND':'Agg'}
    with (reproduction/'evaluation.stdout.log').open('x') as log:
     child=subprocess.Popen(command,cwd=source,env=env,stdin=subprocess.DEVNULL,stdout=log,stderr=subprocess.STDOUT)
     identity=process(child.pid);state.update(status='evaluating_original_official_eval20',child_pid=child.pid,child_birth=identity['birth'] if identity else None);write(status,state)
