@@ -129,8 +129,8 @@ def load_cloud_model(receipt, rows):
     from utils.hhc_frozen_vq import load_frozen_vq
     from utils.hhc_train_shape_prior import TrainShapePrior
     import utils.interhuman_smpl_mgt as assets
-    require(str(ROOT) == '/workspace/HHC' and os.environ.get('CUDA_VISIBLE_DEVICES') == '0',
-            'GPU work is restricted to the existing cloud GPU')
+    require(str(ROOT) == '/workspace/HHC' and os.environ.get('CUDA_VISIBLE_DEVICES') == '1',
+            'GPU work is restricted to authorized Edmond cloud GPU1')
     import subprocess
     free = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.free',
         '--format=csv,noheader,nounits'], text=True).strip().splitlines()

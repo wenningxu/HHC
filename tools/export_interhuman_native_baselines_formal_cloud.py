@@ -224,7 +224,7 @@ def main():
             and baseline['real_generation'] is False and baseline['metadata']['method'] == args.method,
             'Missing actual baseline CPU acceptance')
     rows, request_path, entry = load_requests(receipt, args.mode, args.replication)
-    require(os.environ.get('CUDA_VISIBLE_DEVICES') == '0', 'Only existing cloud GPU0')
+    require(os.environ.get('CUDA_VISIBLE_DEVICES') == '1', 'Only authorized Edmond cloud GPU1')
     free = subprocess.check_output(['nvidia-smi', '--query-gpu=memory.free', '--format=csv,noheader,nounits'], text=True).splitlines()
     require(len(free) == 1 and int(free[0]) >= 13 * 1024, 'Insufficient single-GPU headroom')
     torch.cuda.set_per_process_memory_fraction(.5, 0)
