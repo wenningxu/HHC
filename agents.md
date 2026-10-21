@@ -1,3 +1,5 @@
+2026-10-21 Edmond官方训练中断后已从完整316448恢复。CPU验收196项optimizer、model finite、scheduler/loops通过；checkpoint SHA3a49440bedd273fb92e6354f705667a42eedcf1bc910bb742cfbe06a4487978b。原日志末316630无异常栈，journal会话退出但原因未证实；系统盘989MB、HDD2.3T空闲。首次恢复因新增TMPDIR路径太长导致AF_UNIX错误，首批前终止并保留记录；第二次短路径/workspace/tmp成功。trainer211103/birth44085334；HHC211405、eval211406、watch211407/birth均44106721。原等待器因LAUNCH指纹变动退出，核实无phase/child/intent后归档状态并显式重绑。官方源码/学习协议未改，HHC4000及704k+真实20rep/MM+独立review门槛保持。证据见云output/intergen_official_baseline_20261017/recovery_20261021与本机output/hhc_sota_20261016/edmond_recovery_20261021.json。无新质量结果，无本机权重下载。
+
 # 持久化协作偏好
 
 2026-10-20 原185k VQ已从恢复连接的Edmond找回并CPU验收，115068263B/SHA08ba7d0d...2f8d608；107状态张量严格加载通过，normalizer与当前170k逐字节相同。原训练清单10项源码指纹中7项匹配现版，3项差异已从迁移前归档找回匹配版本。历史native重建FID2.4238196未重跑，不是新生成质量结果。当前170k冻结spec及A4000绑定不改，不直接替换码本，不重复旧失联资产搜索。仅云CPU，未下载本机权重/数组。详见 docs/historical_vq185k_recovery_20261020.md。

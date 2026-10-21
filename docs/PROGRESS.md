@@ -1,3 +1,5 @@
+2026-10-21 Edmond官方训练中断后已从完整316448恢复。CPU验收196项optimizer、model finite、scheduler/loops通过；checkpoint SHA3a49440bedd273fb92e6354f705667a42eedcf1bc910bb742cfbe06a4487978b。原日志末316630无异常栈，journal会话退出但原因未证实；系统盘989MB、HDD2.3T空闲。首次恢复因新增TMPDIR路径太长导致AF_UNIX错误，首批前终止并保留记录；第二次短路径/workspace/tmp成功。trainer211103/birth44085334；HHC211405、eval211406、watch211407/birth均44106721。原等待器因LAUNCH指纹变动退出，核实无phase/child/intent后归档状态并显式重绑。官方源码/学习协议未改，HHC4000及704k+真实20rep/MM+独立review门槛保持。证据见云output/intergen_official_baseline_20261017/recovery_20261021与本机output/hhc_sota_20261016/edmond_recovery_20261021.json。无新质量结果，无本机权重下载。
+
 ### 2026-10-17 00:58 SGT｜HHC已保存暂停，InterGen独占
 
 - 远端保存控制器确认A step4000检查点3429290971B、SHA256 fb1b5a2c606ffaa68fcff878f1038d122713d652b1767de35c64acd0f8614963，模型/optimizer/scheduler/RNG存在。原A17259 exit -15、ABC7178终态是用户优先级要求的有意暂停，不恢复旧driver。
