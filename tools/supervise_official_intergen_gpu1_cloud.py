@@ -16,6 +16,7 @@ def main():
     p.add_argument('--training-driver', choices=['resume_official_intergen_gpu1_cloud.py',
                    'resume_official_intergen_single_loader_cloud.py'],
                    default='resume_official_intergen_gpu1_cloud.py')
+    p.add_argument('--native-debug', action='store_true')
     a = p.parse_args()
     rec = a.recovery_dir
     assert RUN in rec.resolve().parents
@@ -31,6 +32,16 @@ def main():
                str(ROOT/'tools'/a.training_driver),
                '--runtime-wrapper', str(ROOT/'tools/run_official_intergen_checkpointed_cloud.py'),
                '--checkpoint-receipt', str(receipt), '--event-dir', str(rec/'training_events')]
+    trainer_command = command[:]
+    if a.native_debug:
+        identity_file = rec/'inferior_identity.json'
+        assert not identity_file.exists()
+        trainer_command = command[:2] + [str(ROOT/'tools/gdb_official_intergen_inferior_cloud.py'),
+            '--identity-file', str(identity_file), '--driver', command[2]] + command[3:]
+        command = ['/usr/bin/gdb', '--batch', '--return-child-result',
+                   '-ex', 'set pagination off', '-ex', 'run',
+                   '-ex', 'thread apply all bt 32', '-ex', 'info sharedlibrary',
+                   '--args'] + trainer_command
     write_new(rec/'LAUNCH.before.json', previous)
     write_new(rec/'launch_intent.json', {'command': command, 'time': time.time(),
               'checkpoint_sha256': accepted['sha256'], 'supervisor_pid': os.getpid()})
@@ -41,11 +52,26 @@ def main():
         child = subprocess.Popen(command, cwd=previous['cwd'], env=env,
                  stdin=subprocess.DEVNULL, stdout=stream, stderr=subprocess.STDOUT)
     identity = proc(child.pid)
+    if a.native_debug:
+        deadline = time.monotonic()+60
+        while not identity_file.exists() and child.poll() is None and time.monotonic()<deadline:
+            time.sleep(.1)
+        if not identity_file.exists():
+            # Preserve a possibly initializing debugger; never silently retry it.
+            write_new(rec/'debugger_startup_attention.json', {'pid': child.pid,
+                'returncode': child.poll(), 'time': time.time()})
+            raise RuntimeError('Debugger has not registered its inferior; inspect the existing process')
+        registered = read(identity_file)
+        identity = proc(registered['pid'])
+        assert identity and identity['birth'] == registered['birth']
     assert identity and identity['state'] not in ('Z', 'X')
     launch = copy.deepcopy(previous)
-    launch.update(pid=child.pid, birth=identity['birth'], command=command,
+    launch.update(pid=identity['pid'], birth=identity['birth'], command=trainer_command,
                   log_path=str(log), time=time.time(), previous_launch=str(rec/'LAUNCH.before.json'),
                   status='supervised_full_resume_pending_acceptance', supervisor_pid=os.getpid())
+    if a.native_debug:
+        launch['native_debugger'] = {'pid': child.pid, 'command': command,
+            'inferior_wrapper_sha256': sha(ROOT/'tools/gdb_official_intergen_inferior_cloud.py')}
     launch['runtime_changes']['full_state_resume'].update(
         wrapper=str(ROOT/'tools'/a.training_driver), wrapper_sha256=sha(ROOT/'tools'/a.training_driver),
         resume_step=accepted['step'], checkpoint_receipt=str(receipt),
@@ -57,8 +83,10 @@ def main():
             'root_cause_confirmed': False, 'rng_sequence_equivalence_claimed': False}
     atomic(RUN/'LAUNCH.json', launch)
     code = child.wait()
-    write_new(rec/'trainer_exit.json', {'pid': child.pid, 'birth': identity['birth'],
-              'returncode': code, 'signal': -code if code < 0 else None, 'time': time.time()})
+    write_new(rec/'trainer_exit.json', {'pid': identity['pid'], 'birth': identity['birth'],
+              'returncode': code, 'signal': -code if code < 0 and not a.native_debug else None,
+              'returncode_source': 'gdb --return-child-result' if a.native_debug else 'trainer subprocess',
+              'time': time.time()})
     raise SystemExit(code if code >= 0 else 128-code)
 
 
