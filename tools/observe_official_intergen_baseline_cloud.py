@@ -23,7 +23,7 @@ def observe():
   row=logs[-1];last={'epoch':int(row[1]),'step':int(row[2]),'inner_iter':int(row[3]),'lr':float(row[4]),'losses':{k:float(v) for k,v in re.findall(r'([A-Za-z_]+):\s*(-?[0-9]+\.[0-9]+|nan|inf)',row[0]) if k not in ('epoch','niter','inner_iter','lr')}}
   assert all(math.isfinite(v) for v in last['losses'].values()),last
  state='training_verified' if active and last else 'initializing_official_entry' if active else 'completed_pending_checkpoint_acceptance' if 'max_epochs=2000' in tail and 'reached' in tail else 'terminal_needs_audit'
- rows=subprocess.run(['nvidia-smi','--query-compute-apps=pid,name,used_memory','--format=csv,noheader,nounits'],capture_output=True,text=True,check=True)
+ rows=subprocess.run(['nvidia-smi','-i','1','--query-compute-apps=pid,name,used_memory','--format=csv,noheader,nounits'],capture_output=True,text=True,check=True)
  gpu=[{'pid':int(row[0].strip()),'name':row[1].strip(),'used_memory_mib':int(row[2].strip())} for row in csv.reader(io.StringIO(rows.stdout)) if row]
  result={'status':state,'observer_pid':os.getpid(),'observed_at_unix':time.time(),'trainer':identity,'attributed_trainer_live':active,'latest_training_log':last,'log_bytes':size,'gpu_processes':gpu,'checkpoints':[{'path':str(p),'bytes':p.stat().st_size} for p in OUT.rglob('*.ckpt')],'tail':tail[-2000:] if not last or not active else None,'exit_code':'not_available_to_nonparent_observer','no_auto_restart':True,'hhc_remains_saved_step':4000}
  dest=OUT/'OBSERVER_STATUS.json';temporary=dest.with_suffix('.json.tmp');temporary.write_text(json.dumps(result,indent=2)+'\n');os.replace(temporary,dest)
