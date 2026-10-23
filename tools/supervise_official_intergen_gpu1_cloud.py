@@ -17,7 +17,10 @@ def main():
                    'resume_official_intergen_single_loader_cloud.py'],
                    default='resume_official_intergen_gpu1_cloud.py')
     p.add_argument('--native-debug', action='store_true')
+    p.add_argument('--asan', action='store_true',
+                   help='Preload ASAN only into the GDB inferior; requires --native-debug')
     a = p.parse_args()
+    assert not a.asan or a.native_debug
     rec = a.recovery_dir
     assert RUN in rec.resolve().parents
     assert os.environ['CUDA_VISIBLE_DEVICES'] == '1'
@@ -38,8 +41,17 @@ def main():
         assert not identity_file.exists()
         trainer_command = command[:2] + [str(ROOT/'tools/gdb_official_intergen_inferior_cloud.py'),
             '--identity-file', str(identity_file), '--driver', command[2]] + command[3:]
+        debug_environment = []
+        if a.asan:
+            assert os.environ.get('PYTHONMALLOC') == 'malloc'
+            assert not os.environ.get('LD_PRELOAD'), 'Do not instrument the supervisor or debugger'
+            for library in ('libasan.so.8', 'libstdc++.so.6'):
+                assert (Path('/lib/x86_64-linux-gnu') / library).is_file()
+            debug_environment = [
+                '-ex', 'set environment LD_PRELOAD /lib/x86_64-linux-gnu/libasan.so.8:/lib/x86_64-linux-gnu/libstdc++.so.6',
+                '-ex', 'set environment ASAN_OPTIONS detect_leaks=0:halt_on_error=1:abort_on_error=1:quarantine_size_mb=128:protect_shadow_gap=0']
         command = ['/usr/bin/gdb', '--batch', '--return-child-result',
-                   '-ex', 'set pagination off', '-ex', 'run',
+                   '-ex', 'set pagination off'] + debug_environment + ['-ex', 'run',
                    '-ex', 'thread apply all bt 32', '-ex', 'info sharedlibrary',
                    '--args'] + trainer_command
     write_new(rec/'LAUNCH.before.json', previous)
@@ -72,6 +84,11 @@ def main():
     if a.native_debug:
         launch['native_debugger'] = {'pid': child.pid, 'command': command,
             'inferior_wrapper_sha256': sha(ROOT/'tools/gdb_official_intergen_inferior_cloud.py')}
+    if a.asan:
+        launch['runtime_changes']['asan'] = {
+            'enabled': True, 'inferior_only': True,
+            'scope': 'Preload interceptors; uninstrumented native direct writes not fully covered',
+            'root_cause_fixed': False, 'settings': debug_environment}
     launch['runtime_changes']['full_state_resume'].update(
         wrapper=str(ROOT/'tools'/a.training_driver), wrapper_sha256=sha(ROOT/'tools'/a.training_driver),
         resume_step=accepted['step'], checkpoint_receipt=str(receipt),
